@@ -49,6 +49,7 @@
   .pick .chars{font-family:"Noto Sans KR";font-weight:700;font-size:30px;letter-spacing:5px;margin:6px 0 4px;word-break:keep-all}
   .boss{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center}
   .boss .e{font-size:84px;line-height:1;display:inline-block;animation:bob 2s ease-in-out infinite}
+  .boss .dimg{width:130px;height:130px;font-size:0}
   @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
   .btn{background:var(--orange);color:#fff;font-size:22px;padding:14px 22px;border-radius:18px;box-shadow:0 4px 0 #D97F25;display:inline-flex;align-items:center;gap:8px}
   .btn:active{transform:translateY(3px);box-shadow:0 1px 0 #D97F25}
@@ -109,10 +110,23 @@
   .gitem b{display:block;font-family:"Noto Sans KR";font-size:18px;margin-top:4px}
   .gitem span{font-family:"Noto Sans KR";font-size:12px;color:var(--sub)}
   .dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px}
-  .dino{background:#fff;border-radius:20px;padding:14px 8px;text-align:center;box-shadow:0 4px 0 var(--line)}
+  .dino{background:#fff;border-radius:20px;padding:12px 8px;text-align:center;box-shadow:0 4px 0 var(--line);color:var(--ink);font-family:inherit;display:block;width:100%}
+  .dino:active{transform:translateY(3px);box-shadow:0 1px 0 var(--line)}
+  .dino.now{border:3px solid #FFC2C2}
   .dino .e{font-size:60px;line-height:1.1;display:inline-block}
+  .dino .dimg{width:100%;max-width:120px;aspect-ratio:1;display:block;margin:0 auto}
   .dino.lock .e{filter:grayscale(1) brightness(1.6) opacity(.35)}
-  .dino b{display:block;font-weight:400;font-size:17px;margin-top:4px}
+  .dino.lock .dimg{filter:grayscale(1) blur(3px) opacity(.35)}
+  .dino b{display:block;font-weight:400;font-size:17px;margin-top:4px;word-break:keep-all}
+  .aura{display:inline-block;position:relative;border-radius:50%;background:radial-gradient(circle,rgba(255,70,40,0) 38%,rgba(255,70,40,.32) 56%,rgba(255,70,40,0) 71%);animation:aura 1.6s ease-in-out infinite}
+  @keyframes aura{0%,100%{background-size:100% 100%}50%{background-size:112% 112%}}
+  .aura{background-position:center;background-repeat:no-repeat}
+  .dino .aura{display:block;max-width:120px;margin:0 auto}
+  .dmodal .aura{display:block;max-width:340px;margin:0 auto}
+  .dimg{mix-blend-mode:multiply;object-fit:contain;-webkit-user-drag:none;user-select:none}
+  .dmodal .big{width:100%;max-width:340px;aspect-ratio:1;display:block;margin:0 auto 6px;animation:pop .5s cubic-bezier(.2,1.6,.4,1) both}
+  .dmodal span.big{font-size:150px;line-height:1.2;width:auto;aspect-ratio:auto}
+  .ddesc{font-family:"Noto Sans KR";font-size:17px;line-height:1.7;margin:6px 0 10px;word-break:keep-all;text-align:left}
   .empty{text-align:center;color:var(--sub);padding:30px 10px;font-size:18px}
   label.fl{font-size:17px;display:block;margin:10px 0 6px}
   input.tx{font-family:"Noto Sans KR";font-size:18px;padding:12px 14px;border-radius:14px;border:2px solid var(--line);width:100%;background:#fff;color:var(--ink)}
@@ -148,6 +162,7 @@
   @keyframes pop{from{transform:scale(.2) rotate(-12deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
   .arena{position:relative;width:100%;max-width:480px}
   .mon{font-size:130px;line-height:1;display:inline-block;transition:transform .1s}
+  img.mon{width:min(260px,62vw);height:min(260px,62vw);display:block;margin:0 auto 6px}
   .mon.hit{animation:hit .35s}
   .mon.gone{animation:gone 1s forwards}
   @keyframes hit{0%{transform:translateX(0)}20%{transform:translateX(-16px) rotate(-8deg)}40%{transform:translateX(14px) rotate(6deg)}60%{transform:translateX(-8px)}100%{transform:translateX(0)}}
@@ -169,6 +184,7 @@
     .mgrid{grid-template-columns:repeat(2,1fr)}
     .mcard .chars{font-size:22px}
     .boss .e{font-size:64px}
+    .boss .dimg{width:96px;height:96px}
     header.top h1{font-size:22px}
   }
 </style>
@@ -226,10 +242,28 @@ const BASE = [
   {id:"w2",cat:"word",title:"낱말 바다 하마",items:["바다","하마"]},
   {id:"w3",cat:"word",title:"낱말 사자 기차",items:["사자","기차"]}
 ];
+/* 공룡 20마리: 인기 20위부터 1위까지. 그림은 images/dinos/NN_파일이름_angry.jpg, _friendly.jpg */
 const DINOS = [
-  ["🦖",0,"티노"],["🦕",0,"롱롱이"],["🦖",210,"쿵쿵이"],["🦕",260,"쑥쑥이"],
-  ["🐉",0,"아기 용"],["🦖",300,"반짝이"],["🦕",40,"콩콩이"],["🐢",0,"느긋이"],
-  ["🦎",0,"날쌘이"],["🦖",140,"씩씩이"],["🐊",0,"방글이"],["🦕",160,"초롱이"]
+  {f:"koreanosaurus", e:"🦖", n:"코리아노사우루스", d:"우리나라 전라남도 보성에서 화석이 나온 작은 공룡이에요. 뒷다리가 튼튼해서 빨리 달리고, 땅굴을 팠을지도 몰라요."},
+  {f:"protoceratops", e:"🦕", n:"프로토케라톱스", d:"양만 한 크기의 공룡이에요. 앵무새 같은 부리와 머리 뒤 작은 목도리가 있어요. 몽골 사막에서 많이 발견됐어요."},
+  {f:"giganotosaurus", e:"🦖", n:"기가노토사우루스", d:"이름이 '거대한 남쪽 도마뱀'이라는 뜻이에요. 남아메리카에 살았고, 티라노사우루스만큼 커다란 육식 공룡이에요."},
+  {f:"dilophosaurus", e:"🦖", n:"딜로포사우루스", d:"머리 위에 얇은 볏이 두 개 나란히 있는 멋쟁이 공룡이에요. 날씬한 몸으로 재빠르게 움직였어요."},
+  {f:"therizinosaurus", e:"🦖", n:"테리지노사우루스", d:"손에 아주 긴 발톱이 있어요. 무섭게 생겼지만 사실은 나뭇잎을 좋아한 초식 공룡이에요."},
+  {f:"iguanodon", e:"🦕", n:"이구아노돈", d:"엄지손가락에 뾰족한 가시 발톱이 있어요. 아주 오래전에 발견되어 사람들이 가장 먼저 알게 된 공룡 중 하나예요."},
+  {f:"diplodocus", e:"🦕", n:"디플로도쿠스", d:"목과 꼬리가 아주아주 길어서 몸길이가 버스 두 대보다 길어요. 꼬리를 채찍처럼 휘둘렀을지도 몰라요."},
+  {f:"carnotaurus", e:"🦖", n:"카르노타우루스", d:"눈 위에 황소처럼 뿔이 두 개 있어요. 팔은 아주 짧지만 다리가 길어서 엄청 빨리 달렸어요."},
+  {f:"mosasaurus", e:"🐊", n:"모사사우루스", d:"바다에 살던 커다란 파충류예요. 공룡은 아니지만 공룡 시대 바다의 왕이었어요. 지느러미 같은 발로 헤엄쳤어요."},
+  {f:"allosaurus", e:"🦖", n:"알로사우루스", d:"쥐라기 시대 최고의 사냥꾼이에요. 눈 위에 작은 뿔이 있고, 톱니 같은 이빨이 많아요."},
+  {f:"parasaurolophus", e:"🦕", n:"파라사우롤로푸스", d:"머리 뒤로 길게 뻗은 관 모양 볏이 있어요. 이 볏으로 '뿌우' 하고 나팔 소리를 냈을지도 몰라요."},
+  {f:"pachycephalosaurus", e:"🦕", n:"파키케팔로사우루스", d:"머리뼈가 아주 두껍고 단단한 박치기 대장이에요. 머리 둘레에 작은 혹과 가시가 있어요."},
+  {f:"pteranodon", e:"🐉", n:"프테라노돈", d:"하늘을 날던 익룡이에요. 공룡은 아니지만 공룡과 같은 시대에 살았어요. 날개를 펴면 자동차보다 길어요."},
+  {f:"ankylosaurus", e:"🐢", n:"안킬로사우루스", d:"온몸이 단단한 갑옷으로 덮여 있어요. 꼬리 끝에는 커다란 곤봉이 있어서 쿵 하고 휘둘렀어요."},
+  {f:"velociraptor", e:"🦖", n:"벨로키랍토르", d:"칠면조만 한 크기에 깃털이 있었어요. 아주 영리하고 발에 갈고리 같은 큰 발톱이 있어요."},
+  {f:"spinosaurus", e:"🦖", n:"스피노사우루스", d:"등에 커다란 돛이 달려 있어요. 물가에 살면서 물고기를 잡아먹었고, 티라노사우루스보다 몸이 길어요."},
+  {f:"stegosaurus", e:"🦕", n:"스테고사우루스", d:"등에 커다란 뼈 판이 줄지어 있고, 꼬리 끝에 뾰족한 가시가 네 개 있어요. 몸에 비해 뇌는 아주 작았어요."},
+  {f:"brachiosaurus", e:"🦕", n:"브라키오사우루스", d:"앞다리가 뒷다리보다 길어서 기린처럼 목을 높이 들 수 있어요. 높은 나무의 잎을 냠냠 먹었어요."},
+  {f:"triceratops", e:"🦕", n:"트리케라톱스", d:"얼굴에 뿔이 세 개, 머리 뒤에 커다란 목도리가 있어요. 무리를 지어 다니며 서로를 지켰어요."},
+  {f:"tyrannosaurus", e:"🦖", n:"티라노사우루스", d:"공룡의 왕! 바나나만 한 이빨과 아주 센 턱을 가졌어요. 팔은 짧지만 다리와 꼬리가 아주 튼튼해요."}
 ];
 
 /* 스킬 레벨: 쓴 횟수에 따라 레벨과 데미지가 오른다 */
@@ -240,7 +274,7 @@ const GRADE   = [null,
   {n:"불꽃", i:"🔥", c:"#E53935"}, {n:"전설", i:"👑", c:"#6D28D9"}];
 const MAXLV = 5;
 const lvOf = p => { let l = 0; for (let i=1;i<LV_NEED.length;i++) if (p >= LV_NEED[i]) l = i; return l; };
-const bossHP = i => 80 + i*40;
+const bossHP = i => 100 + i*60;
 
 /* ================= 상태 ================= */
 let state = {name:"", done:{}, custom:[], events:0, boss:{idx:0, dmg:0}};
@@ -290,7 +324,30 @@ function skillInfo(c, p){
   return {c, n, lv, dmg:DMG[lv], next, left: next ? next - n : 0, xp};
 }
 function latestHandwriting(c){ const r = records.find(r => r.label === c); return r ? r.img : null; }
-function dinoAt(i){ const d = DINOS[i % DINOS.length]; const lap = Math.floor(i / DINOS.length); return {e:d[0], h:d[1], n:d[2] + (lap ? " "+(lap+1)+"호" : "")}; }
+function dinoAt(i){
+  const k = i % DINOS.length, d = DINOS[k], lap = Math.floor(i / DINOS.length);
+  const base = "images/dinos/" + String(k+1).padStart(2,"0") + "_" + d.f;
+  // 2회차부터는 "강해진" 공룡. HP는 bossHP(i)대로 계속 오른다
+  const pre = lap === 0 ? "" : lap === 1 ? "강해진 " : "엄청 강해진 ";
+  return {i, k, lap, e:d.e, base:d.n, n:pre + d.n, d:d.d, angry:base+"_angry.jpg", friendly:base+"_friendly.jpg"};
+}
+const lapLabel = d => d.lap ? `💪 ${d.lap+1}회차 ${d.k+1}번째 공룡` : `${d.k+1}번째 공룡`;
+/* 받침이 있으면 a(이/은), 없으면 b(가/는) */
+function josa(w, a, b){ const c = String(w).charCodeAt(String(w).length-1); return (c >= 0xAC00 && c <= 0xD7A3 && (c-0xAC00)%28) ? a : b; }
+/* 공룡 그림. 그림이 없으면 이모지로 바꿔 보여 준다 */
+function dinoImg(d, kind, cls, extra){
+  const img = `<img class="dimg ${cls||""}" src="${kind === "angry" ? d.angry : d.friendly}" alt="${esc(d.n)}" data-e="${d.e}" onerror="dinoImgFail(this)" ${extra||""}>`;
+  // 2회차 이상 화난 공룡은 몸 주위에 빨간 기운
+  return d.lap && kind === "angry" ? `<span class="aura">${img}</span>` : img;
+}
+function dinoImgFail(img){
+  const s = document.createElement("span");
+  s.className = img.className.replace("dimg", "e");
+  if (img.id) s.id = img.id;
+  s.textContent = img.dataset.e || "🦖";
+  img.replaceWith(s);
+}
+window.dinoImgFail = dinoImgFail;   // 그림 태그의 onerror에서 부르므로 바깥에 꺼내 둔다
 function missionStatus(m, p){
   const cs = charsOf(m), fresh = cs.filter(c => !(p[c]));
   const avg = cs.reduce((a,c) => a + lvOf(p[c]||0), 0) / cs.length;
@@ -580,10 +637,10 @@ function renderHome(){
   };
   $view.innerHTML = `
     <div class="card boss">
-      <span class="e" style="filter:hue-rotate(${mon.h}deg)">${mon.e}</span>
+      ${dinoImg(mon, "angry", "e")}
       <div>
         <div class="note">${nm}의 글씨를 기다리는 장난꾸러기</div>
-        <div style="font-size:24px">${esc(mon.n)} <span class="note">${b.idx+1}번째 공룡</span></div>
+        <div style="font-size:24px">${esc(mon.n)} <span class="note">${lapLabel(mon)}</span></div>
         <div class="bar hp"><i style="width:${Math.max(0,left/hp*100)}%"></i></div>
         <div class="note">HP ${left} / ${hp} · 미션을 끝내면 스킬로 공격할 수 있어요!</div>
       </div>
@@ -973,10 +1030,10 @@ function showSkillResults(results, next){
 function showBattle(o){
   const st = document.createElement("div"); st.className = "stage";
   let hpNow = o.startHP;
-  st.innerHTML = `<p style="margin-bottom:4px">장난꾸러기 공룡이 나타났다!</p>
+  st.innerHTML = `<p style="margin-bottom:4px">${o.mon.lap ? "💪 더 강해진 공룡이 나타났다!" : "장난꾸러기 공룡이 나타났다!"}</p>
     <h2>${esc(o.mon.n)}</h2>
     <div class="arena">
-      <span class="mon" id="mon" style="filter:hue-rotate(${o.mon.h}deg)">${o.mon.e}</span>
+      ${dinoImg(o.mon, "angry", "mon", 'id="mon"')}
       <div class="bar hp" style="height:24px"><i id="hpbar" style="width:${hpNow/o.hp*100}%"></i></div>
       <div id="hptx" style="font-size:20px">HP ${hpNow} / ${o.hp}</div>
     </div>
@@ -984,9 +1041,10 @@ function showBattle(o){
     <div class="atk">${o.results.map((r,i) => skillCardHTML(r.s,{noxp:true, hw:true, attr:`data-atk="${i}"`})).join("")}</div>
     <div id="after"></div>`;
   document.body.appendChild(st);
-  const mon = st.querySelector("#mon"), arena = st.querySelector(".arena");
+  const arena = st.querySelector(".arena");
   let used = 0;
   st.querySelectorAll("[data-atk]").forEach(card => card.onclick = () => {
+    const mon = st.querySelector("#mon");
     if (card.classList.contains("used") || hpNow <= 0) return;
     card.classList.add("used"); used++;
     const r = o.results[Number(card.dataset.atk)];
@@ -1004,10 +1062,17 @@ function showBattle(o){
     const after = st.querySelector("#after"), guide = st.querySelector("#guide");
     if (win){
       chime(); confetti();
+      const mon = st.querySelector("#mon");
+      if (mon.tagName === "IMG") mon.src = o.mon.friendly;   // 친구가 되면 웃는 얼굴로 바뀐다
       mon.classList.add("gone");
-      guide.innerHTML = `<b style="font-size:26px;color:var(--ink)">🎉 ${esc(o.mon.n)}가 친구가 됐어요!</b>`;
+      guide.innerHTML = `<b style="font-size:26px;color:var(--ink)">🎉 ${esc(o.mon.n)}${josa(o.mon.n,"이","가")} 친구가 됐어요!</b>`;
       const nx = dinoAt(o.idx + 1);
-      after.innerHTML = `<p>다음엔 <b>${esc(nx.n)}</b> (HP ${bossHP(o.idx+1)})가 기다리고 있어요.</p>`;
+      const allDone = o.mon.k === DINOS.length - 1;   // 한 바퀴의 마지막 공룡을 이겼다
+      if (allDone) setTimeout(confetti, 900);
+      after.innerHTML = (allDone ? `<div class="card" style="margin:8px auto 12px;max-width:440px;border:3px solid #FFD54F">
+          <div style="font-size:26px">🏆 공룡 ${DINOS.length}마리와 모두 친구가 됐어요!</div>
+          <p style="margin:8px 0 0">이제 <b>${nx.lap+1}회차</b>! 더 강해진 공룡들이 다시 나타나요.<br>스킬 레벨을 올려서 이겨 봐요! 💪</p></div>` : "")
+        + `<p>다음엔 <b>${esc(nx.n)}</b> (HP ${bossHP(o.idx+1)})${josa(nx.n,"이","가")} 기다리고 있어요.</p>`;
     } else {
       guide.innerHTML = `<b style="font-size:22px;color:var(--ink)">${esc(o.mon.n)}의 HP가 ${hpNow} 남았어요!</b>`;
       after.innerHTML = `<p>💡 새 스킬을 배우거나 스킬 레벨을 올리면 더 세게 공격할 수 있어요.</p>`;
@@ -1021,17 +1086,51 @@ function showBattle(o){
 
 /* ================= 공룡 친구 ================= */
 function renderDinos(){
-  const b = state.boss, h = b.idx;
-  const show = Math.max(h + 1, Math.min(DINOS.length, h + 4));
-  let html = `<div class="card center"><div style="font-size:22px">🦕 친구가 된 공룡 ${h}마리</div>
-    <div class="note">미션을 끝내고 스킬로 공격해서 HP를 0으로 만들면 친구가 돼요.</div></div><div class="dgrid">`;
-  for (let i=0;i<show;i++){
-    const d = dinoAt(i);
-    if (i < h) html += `<div class="dino"><span class="e" style="filter:hue-rotate(${d.h}deg)">${d.e}</span><b>${esc(d.n)}</b><span class="note">💛 친구</span></div>`;
-    else if (i === h){ const hp = bossHP(i); html += `<div class="dino"><span class="e" style="filter:hue-rotate(${d.h}deg)">${d.e}</span><b>${esc(d.n)}</b><div class="bar hp" style="height:10px;margin:6px 8px"><i style="width:${(hp-b.dmg)/hp*100}%"></i></div><span class="note">HP ${hp-b.dmg}/${hp}</span></div>`; }
-    else html += `<div class="dino lock"><span class="e">${d.e}</span><b>???</b><span class="note">HP ${bossHP(i)}</span></div>`;
+  const b = state.boss, h = b.idx, N = DINOS.length;
+  const lap = Math.floor(h / N), nowK = h % N;
+  // 공룡마다 친구가 된 횟수 (2회차부터는 같은 칸에 별이 늘어난다)
+  const times = k => h > k ? Math.floor((h - k - 1) / N) + 1 : 0;
+  const head = lap
+    ? `<div style="font-size:22px">🏆 공룡 ${N}마리 모두 친구! · 💪 ${lap+1}회차 친구 ${nowK}마리</div>`
+    : `<div style="font-size:22px">🦕 친구가 된 공룡 ${h}마리</div>`;
+  let html = `<div class="card center">${head}
+    <div class="note">미션을 끝내고 스킬로 공격해서 HP를 0으로 만들면 친구가 돼요. 친구가 된 공룡을 누르면 크게 볼 수 있어요.</div></div><div class="dgrid">`;
+  for (let k=0;k<N;k++){
+    const t = times(k), stars = t > 1 ? " " + "⭐".repeat(Math.min(t, 5)) : "";
+    if (k === nowK){
+      const d = dinoAt(h), hp = bossHP(h);
+      html += `<button class="dino now" data-dino="${h}">${dinoImg(d, "angry", "e")}<b>${esc(d.n)}</b><div class="bar hp" style="height:10px;margin:6px 8px"><i style="width:${(hp-b.dmg)/hp*100}%"></i></div><span class="note">HP ${hp-b.dmg}/${hp}</span></button>`;
+    } else if (t){
+      const d = dinoAt(k);
+      html += `<button class="dino" data-dino="${k}">${dinoImg(d, "friendly", "e")}<b>${esc(d.n)}</b><span class="note">💛 친구${stars}</span></button>`;
+    } else {
+      html += `<button class="dino lock" data-dino="-1">${dinoImg(dinoAt(k), "friendly", "e")}<b>???</b><span class="note">HP ${bossHP(k)}</span></button>`;
+    }
   }
   $view.innerHTML = html + `</div>`;
+  $view.querySelectorAll("[data-dino]").forEach(el => el.onclick = () => {
+    const i = Number(el.dataset.dino);
+    if (i < 0) return toast("아직 비밀이에요! 앞의 공룡과 먼저 친구가 되어요.");
+    openDino(i, times(i % N));
+  });
+}
+function openDino(i, t){
+  const d = dinoAt(i), b = state.boss, friend = i < b.idx;
+  const hp = bossHP(i), left = hp - b.dmg;
+  const bg = document.createElement("div"); bg.className = "modal-bg";
+  const tag = friend ? `💛 내 친구${t > 1 ? " · ⭐ " + t + "번 친구가 됐어요" : ""}`
+    : `⚔️ 지금 만나고 있는 공룡${t ? " · 💛 예전에 " + t + "번 친구가 됐어요" : ""}`;
+  bg.innerHTML = `<div class="modal dmodal">
+    ${dinoImg(d, friend ? "friendly" : "angry", "big")}
+    <h3>${esc(d.n)}</h3>
+    <div class="note" style="margin-bottom:8px">${lapLabel(d)} · ${tag}</div>
+    <p class="ddesc">${esc(d.d)}</p>
+    ${friend ? "" : `<div class="bar hp"><i style="width:${Math.max(0,left/hp*100)}%"></i></div>
+      <p class="note">HP ${left} / ${hp} · 미션을 끝내고 스킬로 공격하면 친구가 돼요!</p>`}
+    <button class="btn ghost small" data-x style="margin-top:12px">닫기</button>
+  </div>`;
+  document.body.appendChild(bg);
+  bg.addEventListener("click", e => { if (e.target === bg || e.target.closest("[data-x]")) bg.remove(); });
 }
 
 /* ================= 어른 메뉴 ================= */
@@ -1068,7 +1167,7 @@ function renderParent(){
       <div style="font-size:22px">⚙️ 스킬 규칙</div>
       <p class="note" style="margin:6px 0 0">미션을 한 번 끝낼 때마다 그 미션의 글자마다 연습 1회가 쌓여요. 같은 글자가 여러 미션에 나오면(예: 나, 다, 사) 어느 미션에서 쓰든 함께 쌓여요.<br>
       레벨업에 필요한 누적 횟수: ${LV_NEED.slice(1).map((n,i)=>`Lv.${i+1} ${n}번`).join(" · ")}<br>
-      공룡 HP는 80에서 시작해 한 마리마다 40씩 늘어나서, 새 스킬과 강화를 고르게 해야 빨리 친구로 만들 수 있어요.</p>
+      공룡 HP는 100에서 시작해 한 마리마다 60씩 늘어나서, 새 스킬과 강화를 고르게 해야 빨리 친구로 만들 수 있어요.</p>
     </div>
     <div class="card">
       <div style="font-size:22px">👦 아이 이름</div>
