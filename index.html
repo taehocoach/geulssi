@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>글씨 탐험대</title>
+<meta name="theme-color" content="#FF9F43">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="글씨 탐험대">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="fonts/fonts.css">
+<script src="lib/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#FFF8EC; --card:#FFFFFF; --ink:#3B2F2A; --sub:#8A7B72; --line:#F0E2CF;
+    --orange:#FF9F43; --green:#2EC4A0; --pink:#FF7EA8; --blue:#4FA8FF; --red:#FF5A5A;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Jua","Noto Sans KR",sans-serif;-webkit-tap-highlight-color:transparent}
+  button{font-family:inherit;cursor:pointer;border:none}
+  .wrap{max-width:880px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top)) 16px 110px}
+  #printArea{display:none}
+  @media print{ body > *:not(#printArea){display:none !important} #printArea{display:block !important} #printArea img{width:100%;height:auto} @page{size:A4;margin:0} }
+  header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 14px}
+  header.top h1{font-size:28px;margin:0;font-weight:400}
+  .savebadge{font-family:"Noto Sans KR";font-size:12px;color:var(--sub);background:#fff;border:1px solid var(--line);padding:6px 10px;border-radius:999px;white-space:nowrap}
+  nav.tabs{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:2px solid var(--line);display:flex;justify-content:center;z-index:20;padding-bottom:env(safe-area-inset-bottom)}
+  nav.tabs button{flex:1;max-width:170px;background:none;padding:10px 2px 12px;font-size:15px;color:var(--sub);display:flex;flex-direction:column;align-items:center;gap:2px}
+  nav.tabs button .ic{font-size:26px;line-height:1}
+  nav.tabs button.on{color:var(--ink)}
+  nav.tabs button.on .ic{transform:scale(1.15)}
+  .card{background:var(--card);border-radius:24px;padding:20px;box-shadow:0 4px 0 var(--line);margin-bottom:16px}
+  .bar{height:20px;background:#F4EADB;border-radius:999px;overflow:hidden;margin:8px 0 6px}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--green),#7BE0B0);border-radius:999px;transition:width .5s}
+  .bar.hp i{background:linear-gradient(90deg,#FF5A5A,#FF9F43)}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+  .stat{background:#fff;border-radius:16px;padding:12px 6px;text-align:center;box-shadow:0 3px 0 var(--line)}
+  .stat b{display:block;font-size:24px;font-weight:400}
+  .stat span{font-size:13px;color:var(--sub)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+  .pick{background:#fff;border-radius:22px;padding:18px;box-shadow:0 4px 0 var(--line);text-align:center;border:3px solid transparent}
+  .pick.new{border-color:#BFE6FF}
+  .pick.up{border-color:#FFD9A8}
+  .pick .tag{display:inline-block;font-size:15px;color:#fff;padding:4px 12px;border-radius:999px;margin-bottom:8px}
+  .pick .chars{font-family:"Noto Sans KR";font-weight:700;font-size:30px;letter-spacing:5px;margin:6px 0 4px;word-break:keep-all}
+  .boss{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center}
+  .boss .e{font-size:84px;line-height:1;display:inline-block;animation:bob 2s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+  .btn{background:var(--orange);color:#fff;font-size:22px;padding:14px 22px;border-radius:18px;box-shadow:0 4px 0 #D97F25;display:inline-flex;align-items:center;gap:8px}
+  .btn:active{transform:translateY(3px);box-shadow:0 1px 0 #D97F25}
+  .btn.green{background:var(--green);box-shadow:0 4px 0 #1E9A7D}
+  .btn.blue{background:var(--blue);box-shadow:0 4px 0 #2F7FD0}
+  .btn.red{background:var(--red);box-shadow:0 4px 0 #C93F3F}
+  .btn.ghost{background:#fff;color:var(--ink);border:2px solid var(--line);box-shadow:0 4px 0 var(--line)}
+  .btn.small{font-size:17px;padding:10px 14px;border-radius:14px}
+  .btn[disabled]{opacity:.45;pointer-events:none}
+  .sec-title{font-size:22px;margin:22px 4px 10px;display:flex;align-items:center;gap:8px}
+  .sec-title .chip{font-size:14px;color:#fff;padding:3px 10px;border-radius:999px}
+  .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
+  .mcard{background:#fff;border-radius:20px;padding:14px;text-align:left;box-shadow:0 4px 0 var(--line);border:3px solid transparent;position:relative;color:var(--ink)}
+  .mcard .chars{font-size:28px;letter-spacing:4px;margin:6px 0;font-family:"Noto Sans KR";font-weight:700;word-break:keep-all}
+  .mcard .t{font-size:16px;color:var(--sub)}
+  .mcard .badge{display:inline-block;font-size:13px;padding:3px 9px;border-radius:999px;margin-top:2px}
+  .badge.new{background:#E3F3FF;color:#1F7FD6}
+  .badge.up{background:#FFF0DC;color:#C96A10}
+  .mcard.done{background:#FBFFFD;border-color:#D6F3E8}
+  .mcard.locked{opacity:.55}
+  .steps{display:flex;gap:8px;margin:0 0 14px;flex-wrap:wrap}
+  .steps span{font-size:15px;padding:6px 12px;border-radius:999px;background:#F4EADB;color:var(--sub)}
+  .steps span.on{background:var(--orange);color:#fff}
+  .sheet-prev{width:100%;max-width:420px;border:2px solid var(--line);border-radius:12px;display:block;margin:0 auto 14px;background:#fff}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .center{text-align:center}
+  .note{font-family:"Noto Sans KR";font-size:14px;color:var(--sub);line-height:1.6}
+  .cropwrap{position:relative;touch-action:none;margin:0 auto 12px;max-width:640px}
+  .cropwrap canvas{width:100%;display:block;border-radius:12px}
+  input[type=range]{width:100%;accent-color:var(--orange)}
+  .labels{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:10px 0}
+  .labels button{font-family:"Noto Sans KR";font-weight:700;font-size:26px;min-width:64px;padding:10px 14px;border-radius:14px;background:#fff;border:3px solid var(--line);color:var(--ink)}
+  .labels button.on{border-color:var(--orange);background:#FFF1E0}
+
+  /* 스킬 카드 */
+  .sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
+  .skill{position:relative;border-radius:18px;padding:10px 6px 10px;text-align:center;color:#fff;box-shadow:0 4px 0 rgba(0,0,0,.12);overflow:hidden}
+  .skill .ch{font-family:"Noto Sans KR";font-weight:700;font-size:40px;line-height:1.15;text-shadow:0 2px 0 rgba(0,0,0,.15)}
+  .skill .lv{font-size:15px;margin-top:2px}
+  .skill .dm{font-size:13px;opacity:.95}
+  .skill .xp{height:6px;background:rgba(255,255,255,.35);border-radius:999px;margin:6px 6px 0;overflow:hidden}
+  .skill .xp i{display:block;height:100%;background:#fff;border-radius:999px}
+  .skill .hw{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:8px;border:2px solid #fff;object-fit:cover;background:#fff}
+  .skill.lock{background:#EFE6D9 !important;color:#B9A996;box-shadow:0 4px 0 var(--line)}
+  .skill.lock .ch{text-shadow:none;opacity:.55}
+  .g1{background:linear-gradient(160deg,#8FD86F,#4CAF50)}
+  .g2{background:linear-gradient(160deg,#6EC6FF,#2F86E0)}
+  .g3{background:linear-gradient(160deg,#FFD54F,#FF9F1C)}
+  .g4{background:linear-gradient(160deg,#FF8A65,#E53935)}
+  .g5{background:linear-gradient(160deg,#C084FC,#6D28D9);animation:shine 2.4s linear infinite}
+  @keyframes shine{0%,100%{filter:brightness(1)}50%{filter:brightness(1.2)}}
+  .legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .legend span{font-size:13px;color:#fff;padding:4px 10px;border-radius:999px}
+
+  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px}
+  .gitem{background:#fff;border-radius:16px;padding:8px;box-shadow:0 3px 0 var(--line);text-align:center}
+  .gitem img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;display:block;background:#f6f6f6}
+  .gitem b{display:block;font-family:"Noto Sans KR";font-size:18px;margin-top:4px}
+  .gitem span{font-family:"Noto Sans KR";font-size:12px;color:var(--sub)}
+  .dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px}
+  .dino{background:#fff;border-radius:20px;padding:14px 8px;text-align:center;box-shadow:0 4px 0 var(--line)}
+  .dino .e{font-size:60px;line-height:1.1;display:inline-block}
+  .dino.lock .e{filter:grayscale(1) brightness(1.6) opacity(.35)}
+  .dino b{display:block;font-weight:400;font-size:17px;margin-top:4px}
+  .empty{text-align:center;color:var(--sub);padding:30px 10px;font-size:18px}
+  label.fl{font-size:17px;display:block;margin:10px 0 6px}
+  input.tx{font-family:"Noto Sans KR";font-size:18px;padding:12px 14px;border-radius:14px;border:2px solid var(--line);width:100%;background:#fff;color:var(--ink)}
+  table.log{width:100%;border-collapse:collapse;font-family:"Noto Sans KR";font-size:14px}
+  table.log th,table.log td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left}
+  table.log th{color:var(--sub);font-weight:500}
+  .modal-bg{position:fixed;inset:0;background:rgba(59,47,42,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+  .modal{background:#fff;border-radius:24px;padding:24px;max-width:420px;width:100%;text-align:center;max-height:90vh;overflow:auto}
+  .modal h3{margin:0 0 8px;font-weight:400;font-size:24px}
+  .pinbox{max-width:360px}
+  .pins{display:flex;gap:8px;justify-content:center;margin:14px 0 18px}
+  .pins span{width:42px;height:50px;border:3px solid var(--line);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:26px;background:#FFFCF6}
+  .pins span.ok{border-color:var(--green);color:var(--green);background:#EFFFF8}
+  .pins span.bad{border-color:var(--red);color:var(--red);background:#FFF0F0}
+  .pins.shake{animation:hit .4s}
+  .pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .pad button{font-size:28px;padding:12px 0;border-radius:16px;background:#FFF4E2;color:var(--ink);box-shadow:0 3px 0 var(--line)}
+  .pad button:active{transform:translateY(2px);box-shadow:0 1px 0 var(--line)}
+  .pad button.fn{font-size:17px;background:#fff;border:2px solid var(--line)}
+  .linkbtn{background:none;color:var(--sub);font-family:"Noto Sans KR";font-size:13px;text-decoration:underline}
+
+  /* 결과 & 배틀 */
+  .stage{position:fixed;inset:0;background:rgba(255,248,236,.97);z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;overflow:auto}
+  .stage h2{font-size:32px;font-weight:400;margin:6px 0}
+  .stage p{font-size:19px;color:var(--sub);margin:0 0 16px}
+  .ups{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin:10px 0 20px}
+  .upc{width:130px;animation:pop .6s cubic-bezier(.2,1.6,.4,1) both}
+  .upc .skill{padding:14px 6px}
+  .upc .skill .ch{font-size:52px}
+  .upc .msg{font-size:17px;margin-top:8px}
+  .upc .msg.new{color:#1F7FD6}
+  .upc .msg.lv{color:#E07A00}
+  @keyframes pop{from{transform:scale(.2) rotate(-12deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
+  .arena{position:relative;width:100%;max-width:480px}
+  .mon{font-size:130px;line-height:1;display:inline-block;transition:transform .1s}
+  .mon.hit{animation:hit .35s}
+  .mon.gone{animation:gone 1s forwards}
+  @keyframes hit{0%{transform:translateX(0)}20%{transform:translateX(-16px) rotate(-8deg)}40%{transform:translateX(14px) rotate(6deg)}60%{transform:translateX(-8px)}100%{transform:translateX(0)}}
+  @keyframes gone{0%{transform:scale(1)}40%{transform:scale(1.25) rotate(10deg)}100%{transform:scale(1) rotate(0)}}
+  .dmgnum{position:absolute;left:50%;top:30px;font-size:48px;color:var(--red);font-weight:400;-webkit-text-stroke:2px #fff;pointer-events:none;animation:floatup 1s forwards}
+  @keyframes floatup{from{transform:translate(-50%,0) scale(.6);opacity:0}20%{transform:translate(-50%,-10px) scale(1.2);opacity:1}to{transform:translate(-50%,-90px) scale(1);opacity:0}}
+  .atk{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:16px 0}
+  .atk .skill{width:96px;cursor:pointer}
+  .atk .skill.used{opacity:.3;pointer-events:none;filter:grayscale(.6)}
+  .atk .skill:not(.used){animation:ready 1.1s ease-in-out infinite}
+  @keyframes ready{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+  .conf{position:fixed;top:-40px;font-size:28px;z-index:61;pointer-events:none;animation:fall linear forwards}
+  @keyframes fall{to{transform:translateY(110vh) rotate(540deg)}}
+  .toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--ink);color:#fff;font-family:"Noto Sans KR";font-size:14px;padding:10px 16px;border-radius:999px;z-index:70;max-width:90vw;text-align:center}
+  .loading{text-align:center;padding:80px 20px;font-size:22px;color:var(--sub)}
+  @media (max-width:560px){
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .two{grid-template-columns:1fr}
+    .mgrid{grid-template-columns:repeat(2,1fr)}
+    .mcard .chars{font-size:22px}
+    .boss .e{font-size:64px}
+    header.top h1{font-size:22px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1 id="hello">✏️ 글씨 탐험대</h1>
+    <span class="savebadge" id="savebadge">불러오는 중…</span>
+  </header>
+  <main id="view"><div class="loading">⚔️ 모험을 준비하는 중이에요…</div></main>
+</div>
+<div id="printArea"></div>
+<nav class="tabs" id="tabs">
+  <button data-t="home"><span class="ic">🏠</span>홈</button>
+  <button data-t="missions"><span class="ic">📋</span>미션</button>
+  <button data-t="skills"><span class="ic">📖</span>스킬북</button>
+  <button data-t="dinos"><span class="ic">🦕</span>공룡 친구</button>
+  <button data-t="parent"><span class="ic">🔒</span>어른 메뉴</button>
+</nav>
+
+<script>
+(function(){
+"use strict";
+
+/* ================= 데이터 ================= */
+const CATS = {
+  num:{name:"숫자", color:"#FF9F43"},
+  con:{name:"자음", color:"#4FA8FF"},
+  vow:{name:"모음", color:"#2EC4A0"},
+  syl:{name:"글자", color:"#FF7EA8"},
+  word:{name:"낱말", color:"#9B7BFF"},
+  custom:{name:"우리집 미션", color:"#E0A800"}
+};
+const BASE = [
+  {id:"n1",cat:"num",title:"숫자 1 2 3",items:["1","2","3"]},
+  {id:"n2",cat:"num",title:"숫자 4 5 6",items:["4","5","6"]},
+  {id:"n3",cat:"num",title:"숫자 7 8 9",items:["7","8","9"]},
+  {id:"n4",cat:"num",title:"숫자 0 과 10",items:["0","10"]},
+  {id:"n5",cat:"num",title:"1부터 5까지 혼자 쓰기",items:["1","2","3","4","5"],review:true},
+  {id:"n6",cat:"num",title:"6부터 10까지 혼자 쓰기",items:["6","7","8","9","10"],review:true},
+  {id:"c1",cat:"con",title:"자음 ㄱ ㄴ ㄷ",items:["ㄱ","ㄴ","ㄷ"]},
+  {id:"c2",cat:"con",title:"자음 ㄹ ㅁ ㅂ",items:["ㄹ","ㅁ","ㅂ"]},
+  {id:"c3",cat:"con",title:"자음 ㅅ ㅇ ㅈ",items:["ㅅ","ㅇ","ㅈ"]},
+  {id:"c4",cat:"con",title:"자음 ㅊ ㅋ ㅌ",items:["ㅊ","ㅋ","ㅌ"]},
+  {id:"c5",cat:"con",title:"자음 ㅍ ㅎ",items:["ㅍ","ㅎ"]},
+  {id:"v1",cat:"vow",title:"모음 ㅏ ㅑ ㅓ ㅕ",items:["ㅏ","ㅑ","ㅓ","ㅕ"]},
+  {id:"v2",cat:"vow",title:"모음 ㅗ ㅛ ㅜ ㅠ",items:["ㅗ","ㅛ","ㅜ","ㅠ"]},
+  {id:"v3",cat:"vow",title:"모음 ㅡ ㅣ",items:["ㅡ","ㅣ"]},
+  {id:"g1",cat:"syl",title:"글자 가 나 다 라",items:["가","나","다","라"]},
+  {id:"g2",cat:"syl",title:"글자 마 바 사 아",items:["마","바","사","아"]},
+  {id:"g3",cat:"syl",title:"글자 고 노 도 소",items:["고","노","도","소"]},
+  {id:"g4",cat:"syl",title:"글자 우 주 구 부",items:["우","주","구","부"]},
+  {id:"w1",cat:"word",title:"낱말 나무 오리",items:["나무","오리"]},
+  {id:"w2",cat:"word",title:"낱말 바다 하마",items:["바다","하마"]},
+  {id:"w3",cat:"word",title:"낱말 사자 기차",items:["사자","기차"]}
+];
+const DINOS = [
+  ["🦖",0,"티노"],["🦕",0,"롱롱이"],["🦖",210,"쿵쿵이"],["🦕",260,"쑥쑥이"],
+  ["🐉",0,"아기 용"],["🦖",300,"반짝이"],["🦕",40,"콩콩이"],["🐢",0,"느긋이"],
+  ["🦎",0,"날쌘이"],["🦖",140,"씩씩이"],["🐊",0,"방글이"],["🦕",160,"초롱이"]
+];
+
+/* 스킬 레벨: 쓴 횟수에 따라 레벨과 데미지가 오른다 */
+const LV_NEED = [0, 1, 2, 4, 7, 11];          // 각 레벨에 필요한 누적 연습 횟수
+const DMG     = [0, 10, 20, 35, 55, 80];      // 레벨별 데미지
+const GRADE   = [null,
+  {n:"새싹", i:"🌱", c:"#4CAF50"}, {n:"반짝", i:"✨", c:"#2F86E0"}, {n:"번개", i:"⚡", c:"#FF9F1C"},
+  {n:"불꽃", i:"🔥", c:"#E53935"}, {n:"전설", i:"👑", c:"#6D28D9"}];
+const MAXLV = 5;
+const lvOf = p => { let l = 0; for (let i=1;i<LV_NEED.length;i++) if (p >= LV_NEED[i]) l = i; return l; };
+const bossHP = i => 80 + i*40;
+
+/* ================= 상태 ================= */
+let state = {name:"", done:{}, custom:[], events:0, boss:{idx:0, dmg:0}};
+let records = [];
+let tab = "home";
+let cur = null;
+
+const $view = document.getElementById("view");
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+const fmtDate = t => { const d = new Date(t); return (d.getMonth()+1)+"월 "+d.getDate()+"일"; };
+
+function allMissions(){
+  const list = BASE.slice();
+  if (state.name) list.push({id:"me",cat:"word",title:"내 이름 쓰기",items:[state.name]});
+  (state.custom||[]).forEach(m => list.push(m));
+  return list;
+}
+const missionById = id => allMissions().find(m => m.id === id);
+const charsOf = m => Array.from(new Set(Array.from(m.items.join(""))));
+const doneCount = () => allMissions().filter(m => state.done[m.id]).length;
+
+function practiceMap(done){
+  done = done || state.done;
+  const p = {};
+  allMissions().forEach(m => { const d = done[m.id]; if (!d) return; charsOf(m).forEach(c => p[c] = (p[c]||0) + d.count); });
+  return p;
+}
+function skillGroups(){
+  const seen = new Set();
+  const g = [
+    {name:"숫자 스킬", chars:Array.from("1234567890")},
+    {name:"자음 스킬", chars:Array.from("ㄱㄴㄷㄹㅁㅂㅅㅇㅈㅊㅋㅌㅍㅎ")},
+    {name:"모음 스킬", chars:Array.from("ㅏㅑㅓㅕㅗㅛㅜㅠㅡㅣ")}
+  ];
+  g.forEach(x => x.chars.forEach(c => seen.add(c)));
+  const rest = [];
+  allMissions().forEach(m => charsOf(m).forEach(c => { if (!seen.has(c)){ seen.add(c); rest.push(c); } }));
+  g.push({name:"글자 스킬", chars:rest});
+  return g;
+}
+const totalSkills = () => skillGroups().reduce((a,g) => a + g.chars.length, 0);
+function skillInfo(c, p){
+  const n = (p||practiceMap())[c] || 0, lv = lvOf(n);
+  const next = lv < MAXLV ? LV_NEED[lv+1] : null;
+  const prevNeed = LV_NEED[lv] || 0;
+  const xp = next ? (n - prevNeed) / (next - prevNeed) : 1;
+  return {c, n, lv, dmg:DMG[lv], next, left: next ? next - n : 0, xp};
+}
+function latestHandwriting(c){ const r = records.find(r => r.label === c); return r ? r.img : null; }
+function dinoAt(i){ const d = DINOS[i % DINOS.length]; const lap = Math.floor(i / DINOS.length); return {e:d[0], h:d[1], n:d[2] + (lap ? " "+(lap+1)+"호" : "")}; }
+function missionStatus(m, p){
+  const cs = charsOf(m), fresh = cs.filter(c => !(p[c]));
+  const avg = cs.reduce((a,c) => a + lvOf(p[c]||0), 0) / cs.length;
+  return {fresh: fresh.length, avg, maxed: cs.every(c => lvOf(p[c]||0) >= MAXLV)};
+}
+function recommend(){
+  const p = practiceMap(), all = allMissions();
+  const learn = all.find(m => missionStatus(m,p).fresh > 0) || null;
+  let power = null, best = Infinity;
+  all.forEach(m => {
+    const s = missionStatus(m,p);
+    if (s.fresh > 0 || s.maxed) return;
+    const last = state.done[m.id] ? state.done[m.id].last : 0;
+    const score = s.avg * 1e13 + last;  // 레벨이 낮고 오래된 미션 우선
+    if (score < best){ best = score; power = m; }
+  });
+  return {learn, power};
+}
+
+/* ================= 저장소 ================= */
+const Store = {
+  mode:"device", db:null,
+  open(){
+    return new Promise((res, rej) => {
+      const rq = indexedDB.open("geulssi-gw", 1);
+      rq.onupgradeneeded = () => {
+        const d = rq.result;
+        if (!d.objectStoreNames.contains("kv")) d.createObjectStore("kv");
+        if (!d.objectStoreNames.contains("records")) d.createObjectStore("records", {keyPath:"id"});
+      };
+      rq.onsuccess = () => res(rq.result);
+      rq.onerror = () => rej(rq.error);
+    });
+  },
+  tx(store, mode, fn){
+    return new Promise((res, rej) => {
+      const t = this.db.transaction(store, mode), st = t.objectStore(store);
+      let out; const r = fn(st); if (r) r.onsuccess = () => { out = r.result; };
+      t.oncomplete = () => res(out); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+    });
+  },
+  async init(){
+    try{ if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(_){}
+    try{
+      this.db = await this.open();
+      const s = await this.tx("kv", "readonly", st => st.get("state"));
+      const r = await this.tx("records", "readonly", st => st.getAll());
+      return {s: s || null, r: r || []};
+    }catch(e){
+      this.db = null; this.mode = "temp";
+      let s = null, r = [];
+      try{ s = JSON.parse(localStorage.getItem("gw_state") || "null"); r = JSON.parse(localStorage.getItem("gw_records") || "[]"); }catch(_){}
+      return {s, r};
+    }
+  },
+  async saveState(s){
+    if (this.db) return this.tx("kv", "readwrite", st => st.put(s, "state"));
+    localStorage.setItem("gw_state", JSON.stringify(s));
+  },
+  async addRecord(r){
+    if (this.db) return this.tx("records", "readwrite", st => st.put(r));
+    const arr = JSON.parse(localStorage.getItem("gw_records") || "[]");
+    arr.unshift(r); localStorage.setItem("gw_records", JSON.stringify(arr));
+  },
+  async replaceAll(s, recs){
+    if (this.db){
+      await this.tx("records", "readwrite", st => { st.clear(); recs.forEach(r => st.put(r)); });
+      return this.tx("kv", "readwrite", st => st.put(s, "state"));
+    }
+    localStorage.setItem("gw_state", JSON.stringify(s)); localStorage.setItem("gw_records", JSON.stringify(recs));
+  },
+  async resetAll(){
+    if (this.db){
+      await this.tx("records", "readwrite", st => st.clear());
+      return this.tx("kv", "readwrite", st => st.delete("state"));
+    }
+    localStorage.removeItem("gw_state"); localStorage.removeItem("gw_records");
+  }
+};
+let chain = Promise.resolve();
+function persist(){
+  const snap = JSON.parse(JSON.stringify(state));
+  chain = chain.then(() => Store.saveState(snap)).catch(err => {
+    toast(err && err.code === "quota_exceeded" ? "저장 공간이 가득 찼어요." : "저장하지 못했어요. 잠시 후 다시 해 주세요.");
+  });
+  return chain;
+}
+function setBadge(){
+  const b = document.getElementById("savebadge");
+  b.textContent = navigator.onLine === false ? "📴 오프라인 · 이 기기에 저장" : "💾 이 기기에 저장 중";
+}
+
+/* ================= 공통 UI ================= */
+function toast(msg){
+  const t = document.createElement("div"); t.className = "toast"; t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 2600);
+}
+let ac = null;
+function tone(freqs, gap, type){
+  try{
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    freqs.forEach((f,i) => {
+      const o = ac.createOscillator(), g = ac.createGain(), t0 = ac.currentTime + i*gap;
+      o.type = type || "triangle"; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.25, t0 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.3);
+      o.connect(g); g.connect(ac.destination); o.start(t0); o.stop(t0 + 0.35);
+    });
+  }catch(_){}
+}
+const chime = () => tone([523,659,784,1047], .11);
+const hitSfx = () => tone([220,160], .05, "square");
+function confetti(){
+  const set = ["⭐","🎉","✨","🌟","💛","⚡"];
+  for (let i=0;i<28;i++){
+    const c = document.createElement("div"); c.className = "conf";
+    c.textContent = set[i % set.length];
+    c.style.left = Math.random()*100 + "vw";
+    c.style.animationDuration = (2 + Math.random()*1.8) + "s";
+    c.style.animationDelay = (Math.random()*0.6) + "s";
+    document.body.appendChild(c); setTimeout(() => c.remove(), 4800);
+  }
+}
+/* ---------- 부모 비밀번호 (6자리) ---------- */
+const PIN_LEN = 6;
+async function hashPin(pin){
+  const msg = "geulssi-gw:" + pin;
+  try{
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(msg));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,"0")).join("");
+  }catch(_){
+    let h = 2166136261; for (let i=0;i<msg.length;i++){ h ^= msg.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+    return "f" + h.toString(16);
+  }
+}
+/* 화면 키패드: 입력한 자리에는 ✓만 보이고, 틀리면 ✗가 생긴다. '지우기'로 한 칸씩 지운다. */
+function pinPad(opts){
+  return new Promise(resolve => {
+    const bg = document.createElement("div"); bg.className = "modal-bg";
+    bg.innerHTML = `<div class="modal pinbox">
+      <h3>${esc(opts.title)}</h3>
+      <p class="note" id="pinMsg">${esc(opts.text || "")}</p>
+      <div class="pins" id="pins">${Array.from({length:PIN_LEN},()=>`<span></span>`).join("")}</div>
+      <div class="pad">
+        ${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-k="${n}">${n}</button>`).join("")}
+        <button data-k="cancel" class="fn">취소</button><button data-k="0">0</button><button data-k="del" class="fn">⌫ 지우기</button>
+      </div>
+      ${opts.extra ? `<div style="margin-top:12px">${opts.extra}</div>` : ""}
+    </div>`;
+    document.body.appendChild(bg);
+    const boxes = Array.from(bg.querySelectorAll("#pins span"));
+    const msgEl = bg.querySelector("#pinMsg");
+    let digits = [], wrong = false, busy = false;
+    const paint = () => boxes.forEach((b,i) => {
+      b.className = i < digits.length ? (wrong ? "bad" : "ok") : "";
+      b.textContent = i < digits.length ? (wrong ? "✗" : "✓") : "";
+    });
+    const api = {
+      setMsg: t => { msgEl.textContent = t; },
+      fail: t => {
+        wrong = true; paint(); if (t) msgEl.textContent = t;
+        const pins = bg.querySelector("#pins"); pins.classList.remove("shake"); void pins.offsetWidth; pins.classList.add("shake");
+      },
+      clear: () => { digits = []; wrong = false; paint(); },
+      close: v => { document.removeEventListener("keydown", onKey); bg.remove(); resolve(v); }
+    };
+    const press = async k => {
+      if (busy) return;
+      if (k === "cancel") return api.close(null);
+      if (k === "del"){ digits.pop(); if (!digits.length) wrong = false; paint(); return; }
+      if (digits.length >= PIN_LEN) return;
+      digits.push(k); paint();
+      if (digits.length === PIN_LEN){ busy = true; await opts.onFull(digits.join(""), api); busy = false; }
+    };
+    bg.querySelectorAll("[data-k]").forEach(b => b.onclick = () => press(b.dataset.k));
+    const onKey = e => {
+      if (/^[0-9]$/.test(e.key)) press(e.key);
+      else if (e.key === "Backspace") press("del");
+      else if (e.key === "Escape") press("cancel");
+    };
+    document.addEventListener("keydown", onKey);
+    if (opts.onReady) opts.onReady(bg, api);
+    paint();
+  });
+}
+async function setupPin(isFirst){
+  let first = null;
+  const res = await pinPad({
+    title: isFirst ? "🔑 어른 비밀번호 만들기" : "🔑 새 비밀번호 만들기",
+    text: (isFirst ? "미션 완료를 확인할 때 쓸 숫자 6자리를 정해 주세요. " : "") + "아이에게 보이지 않게 입력해 주세요.",
+    onFull: async (pin, api) => {
+      if (!first){ first = pin; api.clear(); api.setMsg("확인을 위해 한 번 더 입력해 주세요."); return; }
+      if (pin !== first){ first = null; api.fail("두 번 입력한 숫자가 달라요. 지우기를 눌러 처음부터 다시 입력해 주세요."); return; }
+      api.close(pin);
+    }
+  });
+  if (!res) return false;
+  state.pinHash = await hashPin(res);
+  await persist();
+  toast("비밀번호를 저장했어요.");
+  return true;
+}
+async function parentGate(text){
+  if (!state.pinHash) return setupPin(true);
+  const res = await pinPad({
+    title: "🔒 어른 확인",
+    text: text || "어른 비밀번호 6자리를 입력해 주세요.",
+    extra: `<button class="linkbtn" id="forgot">비밀번호를 잊었어요</button>`,
+    onReady: (bg, api) => {
+      bg.querySelector("#forgot").onclick = async () => {
+        api.close(null);
+        if (await resetPinFlow()) toast("새 비밀번호로 다시 확인해 주세요.");
+      };
+    },
+    onFull: async (pin, api) => {
+      if (await hashPin(pin) === state.pinHash) api.close(true);
+      else api.fail("비밀번호가 틀렸어요. 지우기를 눌러 다시 입력해 주세요.");
+    }
+  });
+  return res === true;
+}
+function resetPinFlow(){
+  const phrase = "비밀번호를 다시 만들겠습니다";
+  return new Promise(resolve => {
+    const bg = document.createElement("div"); bg.className = "modal-bg";
+    bg.innerHTML = `<div class="modal"><h3>비밀번호 다시 만들기</h3>
+      <p class="note">어른 확인을 위해 아래 문장을 그대로 입력해 주세요.<br><b style="font-size:16px;color:var(--ink)">${phrase}</b></p>
+      <input class="tx" id="rpIn" autocomplete="off">
+      <div class="row" style="justify-content:center;margin-top:16px">
+        <button class="btn ghost small" data-v="0">취소</button><button class="btn small" data-v="1">확인</button></div></div>`;
+    document.body.appendChild(bg);
+    bg.querySelectorAll("[data-v]").forEach(b => b.onclick = async () => {
+      if (b.dataset.v === "0"){ bg.remove(); return resolve(false); }
+      const v = bg.querySelector("#rpIn").value.replace(/\s+/g,"");
+      if (v !== phrase.replace(/\s+/g,"")){ bg.querySelector("#rpIn").style.borderColor = "#FF7EA8"; return; }
+      bg.remove(); resolve(await setupPin(false));
+    });
+  });
+}
+function confirmBox(title, text, okLabel){
+  return new Promise(resolve => {
+    const bg = document.createElement("div"); bg.className = "modal-bg";
+    bg.innerHTML = `<div class="modal"><h3>${esc(title)}</h3><p class="note">${esc(text)}</p>
+      <div class="row" style="justify-content:center;margin-top:16px">
+      <button class="btn ghost small" data-v="0">취소</button>
+      <button class="btn small" data-v="1">${esc(okLabel||"확인")}</button></div></div>`;
+    document.body.appendChild(bg);
+    bg.querySelectorAll("button").forEach(b => b.onclick = () => { bg.remove(); resolve(b.dataset.v === "1"); });
+  });
+}
+function skillCardHTML(s, opts){
+  opts = opts || {};
+  if (!s.lv) return `<div class="skill lock" ${opts.attr||""}><div class="ch">${esc(s.c)}</div><div class="lv">🔒 아직</div><div class="dm">&nbsp;</div></div>`;
+  const g = GRADE[s.lv], hw = opts.hw ? latestHandwriting(s.c) : null;
+  return `<div class="skill g${s.lv} ${opts.cls||""}" ${opts.attr||""}>
+    ${hw ? `<img class="hw" src="${hw}" alt="">` : ""}
+    <div class="ch">${esc(s.c)}</div>
+    <div class="lv">${g.i} Lv.${s.lv}${s.lv>=MAXLV?" MAX":""}</div>
+    <div class="dm">⚔️ ${s.dmg}</div>
+    ${opts.noxp ? "" : `<div class="xp"><i style="width:${Math.round(s.xp*100)}%"></i></div>`}
+  </div>`;
+}
+
+/* ================= 홈 ================= */
+function renderHome(){
+  const p = practiceMap(), all = allMissions();
+  const learned = Object.keys(p).filter(c => p[c] > 0).length;
+  const {learn, power} = recommend();
+  const b = state.boss, hp = bossHP(b.idx), left = hp - b.dmg, mon = dinoAt(b.idx);
+  const nm = state.name ? esc(state.name) : "탐험대원";
+  const pickCard = (m, kind) => {
+    if (!m) return kind === "new"
+      ? `<div class="pick new"><span class="tag" style="background:#2F86E0">✨ 새 스킬 배우기</span><div style="font-size:20px;margin:14px 0">모든 스킬을 배웠어요! 🏆</div></div>`
+      : `<div class="pick up"><span class="tag" style="background:#E07A00">💪 스킬 강화하기</span><div class="note" style="margin:14px 0">먼저 새 스킬을 배우면<br>강화할 수 있어요.</div></div>`;
+    const cs = charsOf(m);
+    const sub = kind === "new"
+      ? `새 스킬 ${cs.filter(c=>!p[c]).length}개를 배울 수 있어요`
+      : cs.map(c => esc(c)+" Lv."+lvOf(p[c]||0)).join(" · ");
+    return `<div class="pick ${kind}">
+      <span class="tag" style="background:${kind==="new"?"#2F86E0":"#E07A00"}">${kind==="new"?"✨ 새 스킬 배우기":"💪 스킬 강화하기"}</span>
+      <div class="note">${esc(m.title)}</div>
+      <div class="chars">${m.items.map(esc).join(" ")}</div>
+      <div class="note" style="margin-bottom:12px">${sub}</div>
+      <button class="btn ${kind==="new"?"blue":""} small" data-open="${esc(m.id)}">${kind==="new"?"배우러 가기":"강화하러 가기"}</button>
+    </div>`;
+  };
+  $view.innerHTML = `
+    <div class="card boss">
+      <span class="e" style="filter:hue-rotate(${mon.h}deg)">${mon.e}</span>
+      <div>
+        <div class="note">${nm}의 글씨를 기다리는 장난꾸러기</div>
+        <div style="font-size:24px">${esc(mon.n)} <span class="note">${b.idx+1}번째 공룡</span></div>
+        <div class="bar hp"><i style="width:${Math.max(0,left/hp*100)}%"></i></div>
+        <div class="note">HP ${left} / ${hp} · 미션을 끝내면 스킬로 공격할 수 있어요!</div>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><b>📋 ${doneCount()}/${all.length}</b><span>완료한 미션</span></div>
+      <div class="stat"><b>📖 ${learned}/${totalSkills()}</b><span>배운 스킬</span></div>
+      <div class="stat"><b>⭐ ${state.events||0}</b><span>인증 횟수</span></div>
+      <div class="stat"><b>🦕 ${b.idx}</b><span>공룡 친구</span></div>
+    </div>
+    <div class="two">${pickCard(learn,"new")}${pickCard(power,"up")}</div>
+    <div class="card note center" style="font-size:15px">✨ 새 글자를 쓰면 <b>새 스킬</b>이 생기고, 💪 같은 글자를 또 쓰면 <b>스킬 레벨과 데미지</b>가 올라가요.</div>`;
+}
+
+/* ================= 미션 목록 ================= */
+function renderMissions(){
+  const all = allMissions(), p = practiceMap();
+  let html = `<div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+    <div style="font-size:20px">완료한 미션 <b style="font-weight:400;color:var(--green);font-size:26px">${doneCount()}</b> / ${all.length}개</div>
+    <div class="row"><span class="badge new" style="font-size:14px;padding:4px 10px;border-radius:999px">✨ 새 스킬</span><span class="badge up" style="font-size:14px;padding:4px 10px;border-radius:999px">💪 강화</span></div></div>`;
+  Object.keys(CATS).forEach(k => {
+    const ms = all.filter(m => m.cat === k);
+    if (!ms.length && k !== "word") return;
+    const d = ms.filter(m => state.done[m.id]).length;
+    html += `<div class="sec-title">${CATS[k].name} <span class="chip" style="background:${CATS[k].color}">${d}/${ms.length}</span></div><div class="mgrid">`;
+    ms.forEach(m => {
+      const st = state.done[m.id], s = missionStatus(m, p);
+      const badge = s.fresh ? `<span class="badge new">✨ 새 스킬 ${s.fresh}개</span>`
+        : s.maxed ? `<span class="badge up">👑 모두 MAX</span>`
+        : `<span class="badge up">💪 평균 Lv.${s.avg.toFixed(1).replace(".0","")}</span>`;
+      html += `<button class="mcard ${st?"done":""}" data-open="${esc(m.id)}">
+        <div class="t">${st ? "✅ " : ""}${esc(m.title)}</div>
+        <div class="chars">${m.items.map(esc).join(" ")}</div>
+        ${badge}
+        ${st ? `<div class="note" style="margin-top:4px">${st.count}번 · 마지막 ${fmtDate(st.last)}</div>` : ""}
+      </button>`;
+    });
+    if (k === "word" && !state.name){
+      html += `<button class="mcard locked" data-go="parent"><div class="t">내 이름 쓰기</div><div class="chars">🔒</div><div class="note">어른 메뉴에서 이름을 넣으면 열려요</div></button>`;
+    }
+    html += `</div>`;
+  });
+  $view.innerHTML = html;
+}
+
+/* ================= 스킬북 ================= */
+function renderSkills(){
+  const p = practiceMap();
+  const learned = Object.keys(p).filter(c => p[c] > 0).length;
+  let html = `<div class="card">
+    <div style="font-size:22px">📖 ${state.name ? esc(state.name)+"의 " : ""}스킬북 <span class="note">배운 스킬 ${learned} / ${totalSkills()}</span></div>
+    <div class="note">카드를 누르면 다음 레벨까지 몇 번 더 써야 하는지, 내가 쓴 글씨가 어떻게 변했는지 볼 수 있어요.</div>
+    <div class="legend">${GRADE.slice(1).map((g,i)=>`<span style="background:${g.c}">${g.i} Lv.${i+1} ${g.n} · ⚔️${DMG[i+1]}</span>`).join("")}</div>
+  </div>`;
+  skillGroups().forEach(g => {
+    if (!g.chars.length) return;
+    const got = g.chars.filter(c => p[c]).length;
+    html += `<div class="sec-title">${g.name} <span class="chip" style="background:#B59E86">${got}/${g.chars.length}</span></div><div class="sgrid">`;
+    g.chars.forEach(c => { html += skillCardHTML(skillInfo(c,p), {hw:true, attr:`data-skill="${esc(c)}"`}); });
+    html += `</div>`;
+  });
+  if (records.length){
+    html += `<div class="sec-title">🖼️ 최근 모은 글씨</div><div class="gallery">${records.slice(0,12).map(r=>`<div class="gitem"><img src="${r.img}" alt=""><b>${esc(r.label)}</b><span>${fmtDate(r.at)}</span></div>`).join("")}</div>`;
+  }
+  $view.innerHTML = html;
+}
+function openSkill(c){
+  const s = skillInfo(c), hw = records.filter(r => r.label === c);
+  const ms = allMissions().filter(m => charsOf(m).includes(c));
+  const bg = document.createElement("div"); bg.className = "modal-bg";
+  let body;
+  if (!s.lv){
+    body = `<div style="width:130px;margin:0 auto">${skillCardHTML(s)}</div>
+      <h3 style="margin-top:12px">아직 배우지 않은 스킬</h3>
+      <p class="note">아래 미션을 하면 <b>${esc(c)}</b> 스킬을 배울 수 있어요.</p>`;
+  } else {
+    const g = GRADE[s.lv];
+    body = `<div style="width:130px;margin:0 auto">${skillCardHTML(s,{noxp:true})}</div>
+      <h3 style="margin-top:12px">${esc(c)} 스킬 · ${g.i} ${g.n}</h3>
+      <p style="font-size:18px;margin:4px 0">지금까지 <b>${s.n}번</b> 썼어요 · 데미지 ⚔️ ${s.dmg}</p>
+      ${s.next ? `<div class="bar"><i style="width:${Math.round(s.xp*100)}%"></i></div>
+        <p class="note">${s.left}번 더 쓰면 <b>Lv.${s.lv+1} ${GRADE[s.lv+1].n}</b>! 데미지가 ${s.dmg} → ${DMG[s.lv+1]}로 올라가요.</p>`
+        : `<p class="note">👑 최고 레벨이에요! 그래도 계속 쓰면 공룡을 공격할 수 있어요.</p>`}
+      ${hw.length ? `<div class="note" style="margin:12px 0 6px">내가 쓴 ${esc(c)} (오래된 것 → 최근)</div>
+        <div class="row" style="justify-content:center;gap:6px">${hw.slice(0,8).reverse().map(r=>`<div style="text-align:center"><img src="${r.img}" style="width:64px;height:64px;border-radius:10px;object-fit:cover;display:block"><span class="note" style="font-size:11px">${fmtDate(r.at)}</span></div>`).join("")}</div>` : ""}`;
+  }
+  body += `<div class="row" style="justify-content:center;margin-top:16px">
+    ${ms.slice(0,3).map(m=>`<button class="btn small ${s.lv?"":"blue"}" data-m="${esc(m.id)}">${esc(m.title)}</button>`).join("")}
+    <button class="btn ghost small" data-x>닫기</button></div>`;
+  bg.innerHTML = `<div class="modal">${body}</div>`;
+  document.body.appendChild(bg);
+  bg.addEventListener("click", e => {
+    if (e.target === bg || e.target.closest("[data-x]")) bg.remove();
+    const m = e.target.closest("[data-m]"); if (m){ bg.remove(); openMission(m.dataset.m); }
+  });
+}
+
+/* ================= 학습지 ================= */
+const SHEET_W = 2480, SHEET_H = 3508;
+function copiesFor(L, review){
+  if (L === 1) return review ? ["dark","trace","blank","blank","blank","blank"] : ["dark","trace","trace","trace","blank","blank"];
+  if (L === 2) return review ? ["dark","blank","blank","blank","blank","blank"] : ["dark","trace","trace","blank","blank","blank"];
+  if (L === 3) return ["dark","trace","blank","blank"];
+  return ["dark","trace","blank"];
+}
+async function drawSheet(m){
+  const allText = m.items.join("") + "글씨미션이름날짜월일다쓰면사진을찍어서올려요어른확인스킬";
+  try{
+    await Promise.all([
+      document.fonts.load('500 200px "Noto Sans KR"', allText),
+      document.fonts.load('400 100px "Jua"', m.title + allText)
+    ]);
+  }catch(_){}
+  const cv = document.createElement("canvas"); cv.width = SHEET_W; cv.height = SHEET_H;
+  const x = cv.getContext("2d");
+  x.fillStyle = "#fff"; x.fillRect(0,0,SHEET_W,SHEET_H);
+  const M = 170;
+  x.fillStyle = "#FFF1DC"; roundRect(x, M-40, 110, SHEET_W-2*(M-40), 270, 50); x.fill();
+  x.fillStyle = "#3B2F2A"; x.font = '400 120px "Jua", sans-serif'; x.textBaseline = "alphabetic";
+  x.fillText("글씨 미션", M, 250);
+  x.fillStyle = "#FF9F43"; x.font = '400 92px "Jua", sans-serif';
+  x.fillText(m.title, M + 620, 250);
+  x.fillStyle = "#8A7B72"; x.font = '500 58px "Noto Sans KR", sans-serif';
+  x.fillText("이름: " + (state.name || "____________") + "        날짜: ____ 월 ____ 일", M, 345);
+
+  const rows = [];
+  m.items.forEach((it, idx) => {
+    const ch = Array.from(it), L = ch.length;
+    const perRow = Math.max(1, Math.floor(6 / L));
+    const copies = copiesFor(L, m.review);
+    for (let i = 0; i < copies.length; i += perRow){
+      rows.push({chars:ch, styles:copies.slice(i, i+perRow), first: i===0});
+    }
+  });
+  if (rows.length <= 4){
+    m.items.forEach(it => {
+      const L = Array.from(it).length, perRow = Math.max(1, Math.floor(6 / L));
+      rows.push({chars:Array.from(it), styles:Array(perRow).fill("blank"), first:true});
+    });
+  }
+  const maxCells = Math.max(6, ...m.items.map(s => Array.from(s).length));
+  const top = 460, bottom = SHEET_H - 260, itemGap = 56, rowGap = 22;
+  const firsts = rows.filter(r => r.first).length;
+  const gaps = (firsts-1)*itemGap + (rows.length-firsts)*rowGap;
+  const cell = Math.min(356, Math.floor((SHEET_W - 2*M) / maxCells), Math.floor((bottom - top - gaps) / rows.length));
+  let y = top;
+  rows.forEach((r, ri) => {
+    if (ri > 0) y += r.first ? itemGap : rowGap;
+    let cx = M;
+    r.styles.forEach(s => { r.chars.forEach(c => { drawCell(x, cx, y, cell, c, s); cx += cell; }); });
+    y += cell;
+  });
+  x.fillStyle = "#8A7B72"; x.font = '400 70px "Jua", sans-serif';
+  x.fillText("다 쓰면 사진을 찍어서 올려요!", M, SHEET_H - 140);
+  x.textAlign = "right"; x.fillText("어른 확인  ☆ ☆ ☆", SHEET_W - M, SHEET_H - 140); x.textAlign = "left";
+  return cv;
+}
+function roundRect(x, X, Y, W, H, r){
+  x.beginPath(); x.moveTo(X+r,Y); x.arcTo(X+W,Y,X+W,Y+H,r); x.arcTo(X+W,Y+H,X,Y+H,r); x.arcTo(X,Y+H,X,Y,r); x.arcTo(X,Y,X+W,Y,r); x.closePath();
+}
+function drawCell(x, X, Y, s, ch, style){
+  x.save();
+  x.strokeStyle = "#D6D6D6"; x.lineWidth = 3; x.setLineDash([16,14]);
+  x.beginPath(); x.moveTo(X+s/2, Y+8); x.lineTo(X+s/2, Y+s-8); x.moveTo(X+8, Y+s/2); x.lineTo(X+s-8, Y+s/2); x.stroke();
+  x.setLineDash([]); x.strokeStyle = "#9A9A9A"; x.lineWidth = 5; x.strokeRect(X, Y, s, s);
+  if (style !== "blank"){
+    x.font = `500 ${Math.round(s*0.74)}px "Noto Sans KR", sans-serif`;
+    x.textAlign = "center"; x.textBaseline = "alphabetic";
+    const mt = x.measureText(ch);
+    const asc = mt.actualBoundingBoxAscent || s*0.55, desc = mt.actualBoundingBoxDescent || 0;
+    x.fillStyle = style === "dark" ? "#2B2B2B" : "#D2D2D2";
+    x.fillText(ch, X + s/2, Y + s/2 + (asc - desc)/2);
+  }
+  x.restore();
+}
+
+/* ================= 미션 진행 ================= */
+function openMission(id){
+  const m = missionById(id); if (!m) return;
+  cur = {m, step:1, sheet:null, img:null, crop:null, label: charsOf(m)[0] || ""};
+  tab = "play"; render();
+}
+function stepsBar(n){
+  const names = ["1 학습지 받기","2 종이에 쓰기","3 사진 올리기","4 제일 잘 쓴 글자"];
+  return `<div class="steps">${names.map((t,i)=>`<span class="${i+1===n?"on":""}">${t}</span>`).join("")}</div>`;
+}
+async function renderPlay(){
+  const m = cur.m, p = practiceMap();
+  const head = `<div class="row" style="justify-content:space-between;margin-bottom:10px">
+      <button class="btn ghost small" data-go="missions">← 미션 목록</button>
+      <div style="font-size:22px">${esc(m.title)}</div></div>`;
+  if (cur.step === 1){
+    const preview = charsOf(m).map(c => {
+      const s = skillInfo(c, p), after = lvOf(s.n + 1);
+      const msg = !s.lv ? `<span style="color:#1F7FD6">✨ 새 스킬!</span>`
+        : after > s.lv ? `<span style="color:#E07A00">⬆️ Lv.${after}로!</span>`
+        : s.lv >= MAXLV ? `👑 MAX` : `${s.left}번 더 쓰면 Lv.${s.lv+1}`;
+      return `<div style="width:92px;text-align:center">${skillCardHTML(s,{noxp:true})}<div class="note" style="font-size:12px;margin-top:4px">${msg}</div></div>`;
+    }).join("");
+    $view.innerHTML = head + `<div class="card">${stepsBar(1)}
+      <div class="center" style="font-size:19px;margin-bottom:8px">이 미션을 끝내면 얻는 스킬</div>
+      <div class="row" style="justify-content:center;margin-bottom:16px">${preview}</div>
+      <div id="sheetBox" class="center note">학습지를 만드는 중…</div>
+      <div class="row" style="justify-content:center;margin-top:6px" id="sheetBtns"></div>
+      <p class="note center" id="sheetNote"></p>
+      <hr style="border:none;border-top:2px dashed var(--line);margin:18px 0">
+      <div class="center">
+        <div style="font-size:22px;margin-bottom:6px">✏️ 종이에 다 썼나요?</div>
+        <div class="note" style="margin-bottom:12px">어른이 학습지 사진을 찍어서 올려 주세요.</div>
+        <label class="btn green" style="cursor:pointer">📷 사진 올리기<input type="file" accept="image/*" id="photoIn" hidden></label>
+      </div></div>`;
+    document.getElementById("photoIn").onchange = e => { const f = e.target.files && e.target.files[0]; if (f) loadPhoto(f); };
+    if (!cur.sheet) cur.sheet = await drawSheet(m);
+    if (tab !== "play" || !cur || cur.step !== 1) return;
+    const box = document.getElementById("sheetBox"); if (!box) return;
+    box.innerHTML = `<img class="sheet-prev" alt="학습지 미리보기" src="${cur.sheet.toDataURL("image/png")}">`;
+    const btns = document.getElementById("sheetBtns"), note = document.getElementById("sheetNote");
+    if (!btns) return;
+    btns.innerHTML = `<button class="btn blue small" id="printBtn">🖨️ 바로 인쇄</button><button class="btn ghost small" id="pdfBtn">📄 PDF로 저장</button><button class="btn ghost small" id="pngBtn">🖼️ 그림으로 저장</button>`;
+    note.textContent = "프린터가 연결되어 있으면 바로 인쇄, 아니면 파일로 저장해서 나중에 인쇄하세요.";
+    document.getElementById("printBtn").onclick = printSheet;
+    document.getElementById("pdfBtn").onclick = () => saveSheet("pdf");
+    document.getElementById("pngBtn").onclick = () => saveSheet("png");
+    return;
+  }
+  if (cur.step === 4){
+    const labels = charsOf(m);
+    $view.innerHTML = head + `<div class="card">${stepsBar(4)}
+      <div class="center" style="font-size:22px;margin-bottom:4px">🔍 제일 잘 쓴 글자를 골라요</div>
+      <p class="note center" style="margin-top:0">사진을 콕 누르면 네모가 옮겨가요. 아래 막대로 네모 크기를 바꿀 수 있어요.</p>
+      <div class="cropwrap"><canvas id="cropCv"></canvas></div>
+      <input type="range" id="cropSize" min="6" max="70" value="${Math.round(cur.crop.r*100)}">
+      <div class="center" style="font-size:20px;margin-top:14px">이 글자는 무엇인가요?</div>
+      <div class="note center">고른 글씨는 스킬 카드의 그림이 돼요!</div>
+      <div class="labels">${labels.map(c=>`<button data-lab="${esc(c)}" class="${c===cur.label?"on":""}">${esc(c)}</button>`).join("")}</div>
+      <div class="row" style="justify-content:center;margin-top:10px">
+        <label class="btn ghost small" style="cursor:pointer">📷 다시 올리기<input type="file" accept="image/*" id="photoIn2" hidden></label>
+        <button class="btn green" id="finishBtn">⭐ 미션 완료!</button>
+      </div></div>`;
+    document.getElementById("photoIn2").onchange = e => { const f = e.target.files && e.target.files[0]; if (f) loadPhoto(f); };
+    document.querySelectorAll("[data-lab]").forEach(b => b.onclick = () => {
+      cur.label = b.dataset.lab;
+      document.querySelectorAll("[data-lab]").forEach(o => o.classList.toggle("on", o === b));
+    });
+    setupCrop();
+    document.getElementById("finishBtn").onclick = finishMission;
+  }
+}
+/* 파일 저장: 공유 시트(태블릿) 또는 다운로드 */
+async function saveFile(blob, filename){
+  try{
+    const file = new File([blob], filename, {type: blob.type});
+    if (navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({files:[file], title: filename});
+      return true;
+    }
+  }catch(e){ if (e && e.name === "AbortError") return false; }
+  try{
+    const url = URL.createObjectURL(blob), a = document.createElement("a");
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    return true;
+  }catch(_){ return false; }
+}
+function printSheet(){
+  if (!cur || !cur.sheet) return;
+  const pa = document.getElementById("printArea");
+  pa.innerHTML = `<img src="${cur.sheet.toDataURL("image/png")}" alt="">`;
+  const img = pa.querySelector("img");
+  const go = () => { try{ window.print(); }catch(_){ toast("인쇄를 열지 못했어요. PDF로 저장해서 인쇄해 주세요."); } };
+  if (img.complete) setTimeout(go, 50); else img.onload = () => setTimeout(go, 50);
+}
+async function saveSheet(kind){
+  if (!cur || !cur.sheet) return;
+  const base = "글씨미션_" + cur.m.title.replace(/\s+/g,"_");
+  let ok = false;
+  if (kind === "pdf"){
+    if (!window.jspdf){ toast("PDF 도구를 불러오지 못했어요. 그림으로 저장해 주세요."); return; }
+    const doc = new window.jspdf.jsPDF({unit:"mm", format:"a4", orientation:"portrait"});
+    doc.addImage(cur.sheet.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, 210, 297);
+    ok = await saveFile(doc.output("blob"), base + ".pdf");
+  } else {
+    const blob = await new Promise(r => cur.sheet.toBlob(r, "image/png"));
+    ok = await saveFile(blob, base + ".png");
+  }
+  if (ok) toast("학습지를 저장했어요.");
+}
+function loadPhoto(file){
+  const url = URL.createObjectURL(file);
+  const im = new Image();
+  im.onload = () => {
+    const max = 1600, sc = Math.min(1, max / Math.max(im.naturalWidth, im.naturalHeight));
+    const cv = document.createElement("canvas");
+    cv.width = Math.round(im.naturalWidth*sc); cv.height = Math.round(im.naturalHeight*sc);
+    cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height);
+    URL.revokeObjectURL(url);
+    cur.img = cv; cur.crop = {cx:0.5, cy:0.5, r:0.22};
+    cur.step = 4; renderPlay();
+  };
+  im.onerror = () => { URL.revokeObjectURL(url); toast("사진을 열지 못했어요. 다른 사진으로 해 볼까요?"); };
+  im.src = url;
+}
+function setupCrop(){
+  const cv = document.getElementById("cropCv"), img = cur.img;
+  cv.width = img.width; cv.height = img.height;
+  const x = cv.getContext("2d");
+  const side = () => cur.crop.r * Math.min(img.width, img.height);
+  const draw = () => {
+    x.drawImage(img, 0, 0);
+    const s = side(), X = cur.crop.cx*img.width - s/2, Y = cur.crop.cy*img.height - s/2;
+    x.fillStyle = "rgba(0,0,0,.45)";
+    x.beginPath(); x.rect(0,0,img.width,img.height); x.rect(X+s,Y,-s,s); x.fill("evenodd");
+    x.lineWidth = Math.max(4, img.width/180); x.strokeStyle = "#FF9F43"; x.strokeRect(X, Y, s, s);
+  };
+  const clamp = () => {
+    const s = side(), hw = s/2/img.width, hh = s/2/img.height;
+    cur.crop.cx = Math.min(1-hw, Math.max(hw, cur.crop.cx));
+    cur.crop.cy = Math.min(1-hh, Math.max(hh, cur.crop.cy));
+  };
+  const move = e => {
+    const r = cv.getBoundingClientRect();
+    cur.crop.cx = (e.clientX - r.left) / r.width; cur.crop.cy = (e.clientY - r.top) / r.height;
+    clamp(); draw();
+  };
+  let down = false;
+  cv.addEventListener("pointerdown", e => { down = true; cv.setPointerCapture(e.pointerId); move(e); });
+  cv.addEventListener("pointermove", e => { if (down) move(e); });
+  cv.addEventListener("pointerup", () => { down = false; });
+  cv.addEventListener("pointercancel", () => { down = false; });
+  document.getElementById("cropSize").oninput = e => { cur.crop.r = Number(e.target.value)/100; clamp(); draw(); };
+  clamp(); draw();
+}
+function cropImage(){
+  const img = cur.img, s = cur.crop.r * Math.min(img.width, img.height);
+  const X = cur.crop.cx*img.width - s/2, Y = cur.crop.cy*img.height - s/2;
+  const out = document.createElement("canvas"); out.width = 220; out.height = 220;
+  const x = out.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0,0,220,220);
+  x.drawImage(img, X, Y, s, s, 0, 0, 220, 220);
+  return out.toDataURL("image/jpeg", 0.78);
+}
+
+async function finishMission(){
+  if (!cur.label){ toast("어떤 글자인지 골라 주세요."); return; }
+  const ok = await parentGate("아이가 종이에 잘 썼는지 확인했나요? 비밀번호를 넣으면 미션이 완료돼요.");
+  if (!ok) return;
+  const m = cur.m, now = Date.now();
+  const before = practiceMap();
+  const prev = state.done[m.id];
+  state.done[m.id] = {count: (prev ? prev.count : 0) + 1, last: now};
+  state.events = (state.events||0) + 1;
+  const after = practiceMap();
+  const results = charsOf(m).map(c => ({c, lb: lvOf(before[c]||0), s: skillInfo(c, after)}));
+  // 배틀 결과는 바로 계산해서 저장 (화면을 닫아도 데미지가 남도록)
+  const b = state.boss || {idx:0, dmg:0};
+  const hp = bossHP(b.idx), startHP = hp - b.dmg;
+  const total = results.reduce((a,r) => a + r.s.dmg, 0);
+  const defeated = total >= startHP;
+  const mon = dinoAt(b.idx);
+  state.boss = defeated ? {idx: b.idx + 1, dmg: 0} : {idx: b.idx, dmg: b.dmg + total};
+  const rec = {id: "r" + now, mission: m.id, title: m.title, label: cur.label, img: cropImage(), at: now};
+  records.unshift(rec);
+  persist();
+  chain = chain.then(() => Store.addRecord(rec)).catch(err => {
+    toast(err && err.code === "quota_exceeded" ? "사진 저장 공간이 가득 찼어요." : "글씨 사진을 저장하지 못했어요.");
+  });
+  showSkillResults(results, () => showBattle({results, hp, startHP, mon, defeated, idx: b.idx}));
+}
+
+function showSkillResults(results, next){
+  chime(); confetti();
+  const st = document.createElement("div"); st.className = "stage";
+  const newOnes = results.filter(r => r.lb === 0).length, ups = results.filter(r => r.lb > 0 && r.s.lv > r.lb).length;
+  const title = newOnes && ups ? "새 스킬 + 레벨 업!" : newOnes ? "✨ 새 스킬을 배웠어요!" : ups ? "⬆️ 스킬 레벨 업!" : "💪 스킬이 강해지고 있어요!";
+  st.innerHTML = `<h2>${title}</h2><p>미션 완료! 이번에 쓴 글자들이 스킬이 됐어요.</p>
+    <div class="ups">${results.map((r,i) => {
+      const msg = r.lb === 0 ? `<div class="msg new">✨ NEW 스킬!</div>`
+        : r.s.lv > r.lb ? `<div class="msg lv">⬆️ Lv.${r.lb} → Lv.${r.s.lv}<br><span class="note">데미지 ${DMG[r.lb]} → ${r.s.dmg}</span></div>`
+        : r.s.lv >= MAXLV ? `<div class="msg">👑 MAX 레벨</div>`
+        : `<div class="msg">경험치 +1<br><span class="note">${r.s.left}번 더 쓰면 Lv.${r.s.lv+1}</span></div>`;
+      return `<div class="upc" style="animation-delay:${i*0.15}s">${skillCardHTML(r.s,{hw:true})}${msg}</div>`;
+    }).join("")}</div>
+    <button class="btn red" id="toBattle">⚔️ 공룡 공격하러 가기</button>`;
+  document.body.appendChild(st);
+  st.querySelector("#toBattle").onclick = () => { st.remove(); next(); };
+}
+
+function showBattle(o){
+  const st = document.createElement("div"); st.className = "stage";
+  let hpNow = o.startHP;
+  st.innerHTML = `<p style="margin-bottom:4px">장난꾸러기 공룡이 나타났다!</p>
+    <h2>${esc(o.mon.n)}</h2>
+    <div class="arena">
+      <span class="mon" id="mon" style="filter:hue-rotate(${o.mon.h}deg)">${o.mon.e}</span>
+      <div class="bar hp" style="height:24px"><i id="hpbar" style="width:${hpNow/o.hp*100}%"></i></div>
+      <div id="hptx" style="font-size:20px">HP ${hpNow} / ${o.hp}</div>
+    </div>
+    <p style="margin:14px 0 0" id="guide">스킬 카드를 눌러서 공격해요!</p>
+    <div class="atk">${o.results.map((r,i) => skillCardHTML(r.s,{noxp:true, hw:true, attr:`data-atk="${i}"`})).join("")}</div>
+    <div id="after"></div>`;
+  document.body.appendChild(st);
+  const mon = st.querySelector("#mon"), arena = st.querySelector(".arena");
+  let used = 0;
+  st.querySelectorAll("[data-atk]").forEach(card => card.onclick = () => {
+    if (card.classList.contains("used") || hpNow <= 0) return;
+    card.classList.add("used"); used++;
+    const r = o.results[Number(card.dataset.atk)];
+    hpNow = Math.max(0, hpNow - r.s.dmg);
+    hitSfx();
+    mon.classList.remove("hit"); void mon.offsetWidth; mon.classList.add("hit");
+    const n = document.createElement("div"); n.className = "dmgnum"; n.textContent = "-" + r.s.dmg;
+    arena.appendChild(n); setTimeout(() => n.remove(), 1000);
+    st.querySelector("#hpbar").style.width = (hpNow/o.hp*100) + "%";
+    st.querySelector("#hptx").textContent = "HP " + hpNow + " / " + o.hp;
+    if (hpNow <= 0 || used === o.results.length) setTimeout(() => finishBattle(hpNow <= 0), 700);
+  });
+  function finishBattle(win){
+    st.querySelectorAll("[data-atk]").forEach(c => c.classList.add("used"));
+    const after = st.querySelector("#after"), guide = st.querySelector("#guide");
+    if (win){
+      chime(); confetti();
+      mon.classList.add("gone");
+      guide.innerHTML = `<b style="font-size:26px;color:var(--ink)">🎉 ${esc(o.mon.n)}가 친구가 됐어요!</b>`;
+      const nx = dinoAt(o.idx + 1);
+      after.innerHTML = `<p>다음엔 <b>${esc(nx.n)}</b> (HP ${bossHP(o.idx+1)})가 기다리고 있어요.</p>`;
+    } else {
+      guide.innerHTML = `<b style="font-size:22px;color:var(--ink)">${esc(o.mon.n)}의 HP가 ${hpNow} 남았어요!</b>`;
+      after.innerHTML = `<p>💡 새 스킬을 배우거나 스킬 레벨을 올리면 더 세게 공격할 수 있어요.</p>`;
+    }
+    after.innerHTML += `<div class="row" style="justify-content:center">
+      <button class="btn ghost" data-c="skills">📖 스킬북</button>
+      <button class="btn" data-c="home">🏠 홈으로</button></div>`;
+    after.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { st.remove(); cur = null; tab = b.dataset.c; render(); });
+  }
+}
+
+/* ================= 공룡 친구 ================= */
+function renderDinos(){
+  const b = state.boss, h = b.idx;
+  const show = Math.max(h + 1, Math.min(DINOS.length, h + 4));
+  let html = `<div class="card center"><div style="font-size:22px">🦕 친구가 된 공룡 ${h}마리</div>
+    <div class="note">미션을 끝내고 스킬로 공격해서 HP를 0으로 만들면 친구가 돼요.</div></div><div class="dgrid">`;
+  for (let i=0;i<show;i++){
+    const d = dinoAt(i);
+    if (i < h) html += `<div class="dino"><span class="e" style="filter:hue-rotate(${d.h}deg)">${d.e}</span><b>${esc(d.n)}</b><span class="note">💛 친구</span></div>`;
+    else if (i === h){ const hp = bossHP(i); html += `<div class="dino"><span class="e" style="filter:hue-rotate(${d.h}deg)">${d.e}</span><b>${esc(d.n)}</b><div class="bar hp" style="height:10px;margin:6px 8px"><i style="width:${(hp-b.dmg)/hp*100}%"></i></div><span class="note">HP ${hp-b.dmg}/${hp}</span></div>`; }
+    else html += `<div class="dino lock"><span class="e">${d.e}</span><b>???</b><span class="note">HP ${bossHP(i)}</span></div>`;
+  }
+  $view.innerHTML = html + `</div>`;
+}
+
+/* ================= 어른 메뉴 ================= */
+let parentOpen = false;
+function renderParent(){
+  if (!parentOpen){
+    $view.innerHTML = `<div class="card center"><div style="font-size:24px;margin-bottom:8px">🔒 어른 메뉴</div>
+      <p class="note">아이 이름 설정, 직접 미션 만들기, 진행 기록과 스킬 현황을 볼 수 있어요.</p>
+      <button class="btn" id="unlock">열기</button></div>`;
+    document.getElementById("unlock").onclick = async () => { if (await parentGate("어른 메뉴를 열어요.")){ parentOpen = true; renderParent(); } };
+    return;
+  }
+  const all = allMissions(), p = practiceMap();
+  const learned = Object.keys(p).filter(c => p[c] > 0);
+  const lvCount = [0,0,0,0,0,0]; learned.forEach(c => lvCount[lvOf(p[c])]++);
+  const weakest = learned.slice().sort((a,b) => p[a]-p[b]).slice(0,8);
+  const rows = all.map(m => { const d = state.done[m.id];
+    return `<tr><td>${esc(m.title)}</td><td>${d ? "✅ "+d.count+"번" : "아직"}</td><td>${d ? fmtDate(d.last) : "-"}</td></tr>`; }).join("");
+  $view.innerHTML = `
+    <div class="card">
+      <div style="font-size:22px;margin-bottom:8px">📊 진행 현황</div>
+      <div class="stats" style="margin-bottom:10px">
+        <div class="stat"><b>${doneCount()}/${all.length}</b><span>완료한 미션</span></div>
+        <div class="stat"><b>${state.events||0}</b><span>총 인증 횟수</span></div>
+        <div class="stat"><b>${learned.length}/${totalSkills()}</b><span>배운 스킬</span></div>
+        <div class="stat"><b>${state.boss.idx}</b><span>공룡 친구</span></div>
+      </div>
+      <div class="note">레벨별 스킬 수: ${GRADE.slice(1).map((g,i)=>`${g.i} Lv.${i+1} <b>${lvCount[i+1]}</b>개`).join(" · ")}</div>
+      ${weakest.length ? `<div class="note" style="margin-top:6px">반복이 더 필요한 글자: <b style="font-size:16px">${weakest.map(esc).join(" ")}</b></div>` : ""}
+      <div style="max-height:320px;overflow:auto;margin-top:14px">
+      <table class="log"><thead><tr><th>미션</th><th>완료</th><th>마지막</th></tr></thead><tbody>${rows}</tbody></table></div>
+    </div>
+    <div class="card">
+      <div style="font-size:22px">⚙️ 스킬 규칙</div>
+      <p class="note" style="margin:6px 0 0">미션을 한 번 끝낼 때마다 그 미션의 글자마다 연습 1회가 쌓여요. 같은 글자가 여러 미션에 나오면(예: 나, 다, 사) 어느 미션에서 쓰든 함께 쌓여요.<br>
+      레벨업에 필요한 누적 횟수: ${LV_NEED.slice(1).map((n,i)=>`Lv.${i+1} ${n}번`).join(" · ")}<br>
+      공룡 HP는 80에서 시작해 한 마리마다 40씩 늘어나서, 새 스킬과 강화를 고르게 해야 빨리 친구로 만들 수 있어요.</p>
+    </div>
+    <div class="card">
+      <div style="font-size:22px">👦 아이 이름</div>
+      <p class="note" style="margin:4px 0 0">이름을 넣으면 학습지에 이름이 찍히고, "내 이름 쓰기" 미션이 열려요.</p>
+      <div class="row" style="margin-top:10px;flex-wrap:nowrap"><input class="tx" id="nameIn" maxlength="8" value="${esc(state.name||"")}" placeholder="예: 김하준"><button class="btn small green" id="nameSave">저장</button></div>
+    </div>
+    <div class="card">
+      <div style="font-size:22px">⭐ 우리집 미션 만들기</div>
+      <p class="note" style="margin:4px 0 0">아이가 좋아하는 글자나 낱말을 띄어쓰기로 구분해 넣어 주세요. 낱말 속 글자가 각각 스킬이 돼요. 예: <b>공룡 기차 엄마</b></p>
+      <label class="fl">미션 이름</label><input class="tx" id="cTitle" maxlength="20" placeholder="예: 좋아하는 것들">
+      <label class="fl">쓸 글자·낱말</label><input class="tx" id="cItems" maxlength="40" placeholder="예: 공룡 기차 엄마">
+      <div style="margin-top:12px"><button class="btn small" id="cAdd">미션 추가</button></div>
+      ${(state.custom||[]).length ? `<div style="margin-top:14px">${state.custom.map(m=>`<div class="row" style="justify-content:space-between;border-top:1px solid var(--line);padding:8px 0"><span style="font-family:'Noto Sans KR'">${esc(m.title)} · ${m.items.map(esc).join(" ")}</span><button class="btn ghost small" data-delc="${esc(m.id)}">삭제</button></div>`).join("")}</div>` : ""}
+    </div>
+    <div class="card">
+      <div style="font-size:22px">💾 저장 · 백업 · 비밀번호</div>
+      <p class="note">모든 기록은 <b>이 태블릿 안에만</b> 저장되고, 인터넷 없이도 계속 쌓여요. 앱을 지우거나 브라우저의 사이트 데이터를 지우면 기록도 사라지니, 가끔 백업 파일을 만들어 두세요.${records.length ? "" : ""}</p>
+      <div class="row" style="margin-bottom:10px"><button class="btn blue small" id="backupBtn">📦 백업 파일 만들기</button>
+        <label class="btn ghost small" style="cursor:pointer">📂 백업에서 되살리기<input type="file" accept=".json,application/json" id="restoreIn" hidden></label></div>
+      <p class="note" id="lastBackup">${state.lastBackup ? "마지막 백업: " + fmtDate(state.lastBackup) : "아직 백업한 적이 없어요."}</p>
+      <div class="row"><button class="btn ghost small" id="pinBtn">🔑 비밀번호 바꾸기</button><button class="btn ghost small" id="resetBtn">🗑️ 모든 기록 지우기</button></div>
+    </div>
+    <div class="card" style="border:2px solid #FFD0D0">
+      <div style="font-size:22px;color:var(--red)">⚠️ 완전 초기화</div>
+      <p class="note" style="margin:6px 0 12px">처음 설치한 상태로 되돌려요. 진행 기록, 스킬, 공룡 친구, 글씨 사진은 물론 <b>아이 이름, 우리집 미션, 어른 비밀번호까지 모두</b> 지워져요. 되돌릴 수 없어요.</p>
+      <button class="btn red small" id="wipeBtn">⚠️ 완전 초기화하기</button>
+    </div>`;
+  document.getElementById("nameSave").onclick = () => {
+    const v = document.getElementById("nameIn").value.trim().replace(/\s+/g,"");
+    state.name = v; persist(); renderHeader(); toast(v ? `"${v}" 이름을 저장했어요.` : "이름을 지웠어요."); renderParent();
+  };
+  document.getElementById("cAdd").onclick = () => {
+    const items = document.getElementById("cItems").value.trim().split(/\s+/).filter(Boolean).slice(0,6);
+    if (!items.length){ toast("쓸 글자를 넣어 주세요."); return; }
+    const title = document.getElementById("cTitle").value.trim() || items.join(" ");
+    state.custom = state.custom || [];
+    state.custom.push({id:"u"+Date.now(), cat:"custom", title, items});
+    persist(); toast("미션을 추가했어요!"); renderParent();
+  };
+  document.querySelectorAll("[data-delc]").forEach(b => b.onclick = async () => {
+    if (!(await confirmBox("미션 삭제", "이 미션을 목록에서 지울까요? 이 미션으로 쌓은 스킬 연습 횟수도 함께 빠져요.", "지우기"))) return;
+    state.custom = state.custom.filter(m => m.id !== b.dataset.delc);
+    delete state.done[b.dataset.delc];
+    persist(); renderParent();
+  });
+  document.getElementById("pinBtn").onclick = () => setupPin(false);
+  document.getElementById("backupBtn").onclick = async () => {
+    state.lastBackup = Date.now(); await persist();
+    const d = new Date(), stamp = d.getFullYear() + String(d.getMonth()+1).padStart(2,"0") + String(d.getDate()).padStart(2,"0");
+    const data = JSON.stringify({app:"geulssi-gw", version:1, savedAt: Date.now(), state, records});
+    const ok = await saveFile(new Blob([data], {type:"application/json"}), "글씨탐험대_백업_" + stamp + ".json");
+    if (ok){ toast("백업 파일을 만들었어요. 파일 앱이나 구글 드라이브에 보관해 두세요."); renderParent(); }
+  };
+  document.getElementById("restoreIn").onchange = async e => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    let data = null;
+    try{ data = JSON.parse(await f.text()); }catch(_){}
+    if (!data || data.app !== "geulssi-gw" || !data.state || !Array.isArray(data.records)){ toast("글씨 탐험대 백업 파일이 아니에요."); return; }
+    const when = data.savedAt ? fmtDate(data.savedAt) : "알 수 없는 날짜";
+    if (!(await confirmBox("백업에서 되살리기", `${when}에 만든 백업으로 바꿀까요? 지금 이 태블릿의 기록은 백업 내용으로 바뀌어요.`, "되살리기"))) return;
+    try{
+      await chain;
+      state = Object.assign({name:"", done:{}, custom:[], events:0, boss:{idx:0, dmg:0}}, data.state);
+      if (!state.boss) state.boss = {idx:0, dmg:0};
+      records = data.records.slice().sort((a,b) => b.at - a.at);
+      await Store.replaceAll(JSON.parse(JSON.stringify(state)), records);
+      renderHeader(); toast("백업에서 되살렸어요!"); renderParent();
+    }catch(_){ toast("되살리지 못했어요. 다른 백업 파일로 해 볼까요?"); }
+  };
+  document.getElementById("wipeBtn").onclick = async () => {
+    if (!(await confirmBox("⚠️ 완전 초기화", "이름, 우리집 미션, 비밀번호를 포함한 모든 것이 지워지고 되돌릴 수 없어요. 정말 처음으로 돌아갈까요?", "처음으로 되돌리기"))) return;
+    if (!(await parentGate("완전 초기화를 하려면 비밀번호를 한 번 더 입력해 주세요."))) return;
+    try{ await chain; await Store.resetAll(); }
+    catch(_){ toast("일부 기록을 지우지 못했어요. 잠시 후 다시 해 주세요."); return; }
+    state = {name:"", done:{}, custom:[], events:0, boss:{idx:0, dmg:0}};
+    records = []; parentOpen = false; cur = null;
+    renderHeader(); tab = "home"; render();
+    toast("처음 상태로 되돌렸어요. 다음 어른 확인 때 새 비밀번호를 만들어요.");
+  };
+  document.getElementById("resetBtn").onclick = async () => {
+    if (!(await confirmBox("모든 기록 지우기", "완료한 미션, 스킬, 공룡 친구, 글씨 사진이 모두 지워지고 되돌릴 수 없어요.", "모두 지우기"))) return;
+    try{ await chain; await Store.resetAll(); }catch(_){ toast("일부 기록을 지우지 못했어요."); }
+    state = {name: state.name, pinHash: state.pinHash, done:{}, custom: state.custom||[], events:0, boss:{idx:0, dmg:0}}; records = [];
+    persist(); toast("기록을 모두 지웠어요."); renderParent();
+  };
+}
+
+/* ================= 라우팅 ================= */
+function renderHeader(){
+  document.getElementById("hello").textContent = state.name ? "✏️ " + state.name + "의 글씨 탐험대" : "✏️ 글씨 탐험대";
+}
+function render(){
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.t === tab || (tab==="play" && b.dataset.t==="missions")));
+  if (tab !== "parent") parentOpen = false;
+  if (tab === "home") renderHome();
+  else if (tab === "missions") renderMissions();
+  else if (tab === "play" && cur) renderPlay();
+  else if (tab === "skills") renderSkills();
+  else if (tab === "dinos") renderDinos();
+  else if (tab === "parent") renderParent();
+  else { tab = "home"; renderHome(); }
+  window.scrollTo(0,0);
+}
+document.getElementById("tabs").addEventListener("click", e => {
+  const b = e.target.closest("button[data-t]"); if (!b) return;
+  cur = null; tab = b.dataset.t; render();
+});
+$view.addEventListener("click", e => {
+  const o = e.target.closest("[data-open]"); if (o){ openMission(o.dataset.open); return; }
+  const s = e.target.closest("[data-skill]"); if (s){ openSkill(s.dataset.skill); return; }
+  const g = e.target.closest("[data-go]"); if (g){ cur = null; tab = g.dataset.go; render(); }
+});
+
+/* ================= 시작 ================= */
+(async () => {
+  const {s, r} = await Store.init();
+  if (s) state = Object.assign({name:"", done:{}, custom:[], events:0, boss:{idx:0, dmg:0}}, s);
+  if (!state.boss) state.boss = {idx:0, dmg:0};
+  records = Array.isArray(r) ? r.sort((a,b) => b.at - a.at) : [];
+  setBadge(); renderHeader(); render();
+})();
+window.addEventListener("online", setBadge); window.addEventListener("offline", setBadge);
+if ("serviceWorker" in navigator && location.protocol !== "file:"){
+  window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
+}
+})();
+</script>
+</body>
+</html>
