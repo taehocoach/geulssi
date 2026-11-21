@@ -1,0 +1,9 @@
+학교안심 받아쓰기 OTF B (Hakgyoansim Badasseugi OTF B), Version 1.00
+Copyright (c) KERIS (한국교육학술정보원). https://www.keris.or.kr/
+디자인: 헤움디자인
+
+교육부, 17개 시도교육청, KERIS가 공동으로 도입한 오픈 폰트로, SIL Open Font License(OFL)로 안내되어 있습니다.
+인쇄물, 웹사이트, 영상, 앱 임베딩 등에 쓸 수 있고 글꼴 파일의 수정, 복제, 배포가 가능하며, 글꼴 파일 자체를 유료로 판매하는 것은 금지됩니다.
+참고: https://www.sandollcloud.com/free-font/21055/Hakgyoansim-Badasseugi
+
+이 앱에서는 획순 보기 칸의 바탕 글꼴로만 씁니다. 파일은 받은 그대로이고 이름만 hakgyoansim-badasseugi-b.otf로 바꿨습니다.

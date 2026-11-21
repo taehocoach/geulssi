@@ -13,7 +13,6 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="stylesheet" href="fonts/fonts.css">
-<script src="lib/jspdf.umd.min.js"></script>
 <style>
   :root{
     --bg:#FFF8EC; --card:#FFFFFF; --ink:#3B2F2A; --sub:#8A7B72; --line:#F0E2CF;
@@ -23,8 +22,6 @@
   html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Jua","Noto Sans KR",sans-serif;-webkit-tap-highlight-color:transparent}
   button{font-family:inherit;cursor:pointer;border:none}
   .wrap{max-width:880px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top)) 16px 110px}
-  #printArea{display:none}
-  @media print{ body > *:not(#printArea){display:none !important} #printArea{display:block !important} #printArea img{width:100%;height:auto} @page{size:A4;margin:0} }
   header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 14px}
   header.top h1{font-size:28px;margin:0;font-weight:400}
   .savebadge{font-family:"Noto Sans KR";font-size:12px;color:var(--sub);background:#fff;border:1px solid var(--line);padding:6px 10px;border-radius:999px;white-space:nowrap}
@@ -70,10 +67,35 @@
   .badge.up{background:#FFF0DC;color:#C96A10}
   .mcard.done{background:#FBFFFD;border-color:#D6F3E8}
   .mcard.locked{opacity:.55}
+  .mcard.gcard{border-color:#E2D6FF;background:#FCFAFF}
+  .mcard.gcard .chars{letter-spacing:0;word-break:keep-all;line-height:1.35}
+  .mcard.gcard.done{border-color:#D6F3E8;background:#FBFFFD}
   .steps{display:flex;gap:8px;margin:0 0 14px;flex-wrap:wrap}
   .steps span{font-size:15px;padding:6px 12px;border-radius:999px;background:#F4EADB;color:var(--sub)}
   .steps span.on{background:var(--orange);color:#fff}
-  .sheet-prev{width:100%;max-width:420px;border:2px solid var(--line);border-radius:12px;display:block;margin:0 auto 14px;background:#fff}
+  /* 획순: 글꼴(학교안심 받아쓰기 B) 모양을 붓으로 칠하기 */
+  .bslot{display:flex;justify-content:center;margin:4px 0 0}
+  .bcell{position:relative;width:100%;max-width:330px;margin:0 auto;aspect-ratio:1;border-radius:14px;border:2px solid #D8CFC4;background:#fff;overflow:hidden}
+  .bcell svg.guide{position:absolute;inset:0;width:100%;height:100%}
+  .bcell canvas{position:absolute;inset:0;width:100%;height:100%}
+  .bcell svg.ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+  .bcell .pencil{position:absolute;font-size:26px;line-height:1;transform:translate(-4px,-26px);pointer-events:none;transition:opacity .2s}
+  .bcell .bwait{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:400 200px HakgyoB,"Noto Sans KR",sans-serif;color:#E6E0D8}
+  .bnum{font:700 15px "Noto Sans KR",sans-serif}
+  .lchips{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:6px 0 12px}
+  .lchips .wgrp{display:flex;gap:4px;padding:4px;border-radius:16px;background:#FFF6EA}
+  .lchips button{font-family:HakgyoB,"Noto Sans KR";font-size:26px;width:50px;height:50px;border-radius:12px;background:#fff;border:2px solid var(--line);color:var(--ink)}
+  .lchips button.on{border-color:#E8590C;background:#FFF0E4;color:#E8590C}
+  .wlist{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .wlist div{background:#FFF8EC;border:2px solid var(--line);border-radius:16px;padding:8px 16px;display:flex;align-items:baseline;gap:8px}
+  .wlist b{font-family:HakgyoB,"Noto Sans KR";font-weight:400;font-size:40px}
+  .wlist span{font-size:18px;color:var(--orange)}
+  .bigword{font-family:HakgyoB,"Noto Sans KR";font-size:clamp(72px,22vw,140px);line-height:1.15;text-align:center;letter-spacing:6px;color:var(--ink);background:#FFF8EC;border:2px solid var(--line);border-radius:20px;padding:8px 18px;margin:8px auto 4px;width:fit-content;max-width:100%}
+  .sgrid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px}
+  .sgrid2 figure{margin:0;text-align:center;cursor:pointer}
+  .sgrid2 .bcell{max-width:none;border-radius:10px}
+  .sgrid2 .pencil{font-size:18px;transform:translate(-3px,-18px)}
+  .sgrid2 figcaption{font-size:13px;color:var(--sub);margin-top:2px}
   .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
   .center{text-align:center}
   .note{font-family:"Noto Sans KR";font-size:14px;color:var(--sub);line-height:1.6}
@@ -122,6 +144,8 @@
   @keyframes aura{0%,100%{background-size:100% 100%}50%{background-size:112% 112%}}
   .aura{background-position:center;background-repeat:no-repeat}
   .dino .aura{display:block;max-width:120px;margin:0 auto}
+  .cheer{margin:8px auto 12px;max-width:440px;border:3px solid #FFD54F;animation:pop .6s cubic-bezier(.2,1.6,.4,1) both}
+  .cheer.big{border-width:4px;background:linear-gradient(160deg,#FFF8D6,#FFE9B8)}
   .dmodal .aura{display:block;max-width:340px;margin:0 auto}
   .dimg{mix-blend-mode:multiply;object-fit:contain;-webkit-user-drag:none;user-select:none}
   .dmodal .big{width:100%;max-width:340px;aspect-ratio:1;display:block;margin:0 auto 6px;animation:pop .5s cubic-bezier(.2,1.6,.4,1) both}
@@ -147,6 +171,7 @@
   .pad button:active{transform:translateY(2px);box-shadow:0 1px 0 var(--line)}
   .pad button.fn{font-size:17px;background:#fff;border:2px solid var(--line)}
   .linkbtn{background:none;color:var(--sub);font-family:"Noto Sans KR";font-size:13px;text-decoration:underline}
+  .linkbtn.galbtn{font-size:15px;cursor:pointer;padding:6px 8px;display:inline-block}
 
   /* 결과 & 배틀 */
   .stage{position:fixed;inset:0;background:rgba(255,248,236,.97);z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;overflow:auto}
@@ -167,6 +192,32 @@
   .mon.gone{animation:gone 1s forwards}
   @keyframes hit{0%{transform:translateX(0)}20%{transform:translateX(-16px) rotate(-8deg)}40%{transform:translateX(14px) rotate(6deg)}60%{transform:translateX(-8px)}100%{transform:translateX(0)}}
   @keyframes gone{0%{transform:scale(1)}40%{transform:scale(1.25) rotate(10deg)}100%{transform:scale(1) rotate(0)}}
+  .mon.hit2{animation:hit2 .5s}
+  @keyframes hit2{0%{transform:translateX(0) scale(1)}15%{transform:translateX(-26px) rotate(-14deg) scale(.92)}35%{transform:translateX(24px) rotate(12deg)}55%{transform:translateX(-14px) rotate(-6deg)}75%{transform:translateX(8px)}100%{transform:translateX(0) scale(1)}}
+  .atkfx{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);font-size:40px;line-height:1.25;color:#fff;-webkit-text-stroke:2px #2F86E0;text-shadow:0 4px 0 #2F86E0;white-space:nowrap;pointer-events:none;z-index:3;animation:shout 1.3s forwards}
+  .atkfx.weak{-webkit-text-stroke:2px #E53935;text-shadow:0 4px 0 #E53935;font-size:46px}
+  @keyframes shout{0%{transform:translate(-50%,-50%) scale(.3);opacity:0}15%{transform:translate(-50%,-50%) scale(1.25);opacity:1}30%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{transform:translate(-50%,-80%) scale(1);opacity:0}}
+  .dmgnum.big{font-size:72px;color:#FFB300;-webkit-text-stroke:3px #C62828}
+  .weakline{font-size:20px;margin:2px 0 6px;color:var(--ink)}
+  .weakline b{display:inline-block;font-family:"Noto Sans KR";font-weight:700;font-size:26px;min-width:44px;padding:2px 8px;margin:0 3px;border-radius:12px;background:#FFE4E4;border:2px solid #FF8A8A}
+  .skill.weakc{outline:4px solid #FF5A5A;outline-offset:2px}
+  .skill .wtag{position:absolute;top:-2px;left:0;right:0;font-size:11px;background:#E53935;color:#fff;border-radius:10px 10px 0 0;padding:1px 0}
+  .skill.weakc .ch{margin-top:10px}
+  .skill .zz{position:absolute;bottom:4px;right:6px;font-size:16px}
+  .skill.wordc{background:linear-gradient(160deg,#5EEAD4,#0E9F8E);width:auto !important;min-width:120px;padding:10px 14px}
+  .skill.wordc .ch{font-size:34px;letter-spacing:2px}
+  .sgrid.words{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+  .sgrid.words .skill.wordc{min-width:0}
+  .weaknext{background:#FFF0F0;border:2px solid #FFC2C2;border-radius:18px;padding:10px 12px;margin:6px auto 12px;max-width:460px;font-size:18px}
+  .weakcard{border:3px solid #FFC2C2;background:#FFF7F7}
+  .weakcard .wchars{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:10px 0 4px}
+  .weakcard .wchars button{font-family:"Noto Sans KR";font-weight:700;font-size:44px;min-width:86px;padding:6px 14px 4px;border-radius:18px;background:#fff;color:var(--ink);border:3px solid #FF8A8A;box-shadow:0 4px 0 #FFC2C2;display:flex;flex-direction:column;align-items:center;line-height:1.1}
+  .weakcard .wchars button span{font-family:"Jua";font-weight:400;font-size:13px;color:var(--sub);margin-top:2px}
+  .weakcard .wchars button:active{transform:translateY(3px);box-shadow:0 1px 0 #FFC2C2}
+  .mcard .tired{display:block;font-size:12.5px;padding:5px 8px;margin:6px 0 0;line-height:1.45}
+  .tired{display:inline-block;background:#EEF0FF;color:#4B4FA8;border-radius:14px;padding:6px 12px;font-size:16px;margin:6px auto}
+  .tired.big{font-size:19px;padding:10px 16px;margin:0 auto 10px}
+  .tired span{font-size:15px;color:#6B6FB8}
   .dmgnum{position:absolute;left:50%;top:30px;font-size:48px;color:var(--red);font-weight:400;-webkit-text-stroke:2px #fff;pointer-events:none;animation:floatup 1s forwards}
   @keyframes floatup{from{transform:translate(-50%,0) scale(.6);opacity:0}20%{transform:translate(-50%,-10px) scale(1.2);opacity:1}to{transform:translate(-50%,-90px) scale(1);opacity:0}}
   .atk{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:16px 0}
@@ -197,12 +248,11 @@
   </header>
   <main id="view"><div class="loading">⚔️ 모험을 준비하는 중이에요…</div></main>
 </div>
-<div id="printArea"></div>
 <nav class="tabs" id="tabs">
   <button data-t="home"><span class="ic">🏠</span>홈</button>
   <button data-t="missions"><span class="ic">📋</span>미션</button>
   <button data-t="skills"><span class="ic">📖</span>스킬북</button>
-  <button data-t="dinos"><span class="ic">🦕</span>공룡 친구</button>
+  <button data-t="dinos"><span class="ic">🏅</span>친구 도감</button>
   <button data-t="parent"><span class="ic">🔒</span>어른 메뉴</button>
 </nav>
 
@@ -236,34 +286,71 @@ const BASE = [
   {id:"v3",cat:"vow",title:"모음 ㅡ ㅣ",items:["ㅡ","ㅣ"]},
   {id:"g1",cat:"syl",title:"글자 가 나 다 라",items:["가","나","다","라"]},
   {id:"g2",cat:"syl",title:"글자 마 바 사 아",items:["마","바","사","아"]},
+  {id:"g5",cat:"syl",title:"글자 자 차 카 타",items:["자","차","카","타"]},
+  {id:"g6",cat:"syl",title:"글자 파 하",items:["파","하"]},
   {id:"g3",cat:"syl",title:"글자 고 노 도 소",items:["고","노","도","소"]},
   {id:"g4",cat:"syl",title:"글자 우 주 구 부",items:["우","주","구","부"]},
-  {id:"w1",cat:"word",title:"낱말 나무 오리",items:["나무","오리"]},
-  {id:"w2",cat:"word",title:"낱말 바다 하마",items:["바다","하마"]},
-  {id:"w3",cat:"word",title:"낱말 사자 기차",items:["사자","기차"]}
 ];
-/* 공룡 20마리: 인기 20위부터 1위까지. 그림은 images/dinos/NN_파일이름_angry.jpg, _friendly.jpg */
-const DINOS = [
-  {f:"koreanosaurus", e:"🦖", n:"코리아노사우루스", d:"우리나라 전라남도 보성에서 화석이 나온 작은 공룡이에요. 뒷다리가 튼튼해서 빨리 달리고, 땅굴을 팠을지도 몰라요."},
-  {f:"protoceratops", e:"🦕", n:"프로토케라톱스", d:"양만 한 크기의 공룡이에요. 앵무새 같은 부리와 머리 뒤 작은 목도리가 있어요. 몽골 사막에서 많이 발견됐어요."},
-  {f:"giganotosaurus", e:"🦖", n:"기가노토사우루스", d:"이름이 '거대한 남쪽 도마뱀'이라는 뜻이에요. 남아메리카에 살았고, 티라노사우루스만큼 커다란 육식 공룡이에요."},
-  {f:"dilophosaurus", e:"🦖", n:"딜로포사우루스", d:"머리 위에 얇은 볏이 두 개 나란히 있는 멋쟁이 공룡이에요. 날씬한 몸으로 재빠르게 움직였어요."},
-  {f:"therizinosaurus", e:"🦖", n:"테리지노사우루스", d:"손에 아주 긴 발톱이 있어요. 무섭게 생겼지만 사실은 나뭇잎을 좋아한 초식 공룡이에요."},
-  {f:"iguanodon", e:"🦕", n:"이구아노돈", d:"엄지손가락에 뾰족한 가시 발톱이 있어요. 아주 오래전에 발견되어 사람들이 가장 먼저 알게 된 공룡 중 하나예요."},
-  {f:"diplodocus", e:"🦕", n:"디플로도쿠스", d:"목과 꼬리가 아주아주 길어서 몸길이가 버스 두 대보다 길어요. 꼬리를 채찍처럼 휘둘렀을지도 몰라요."},
-  {f:"carnotaurus", e:"🦖", n:"카르노타우루스", d:"눈 위에 황소처럼 뿔이 두 개 있어요. 팔은 아주 짧지만 다리가 길어서 엄청 빨리 달렸어요."},
-  {f:"mosasaurus", e:"🐊", n:"모사사우루스", d:"바다에 살던 커다란 파충류예요. 공룡은 아니지만 공룡 시대 바다의 왕이었어요. 지느러미 같은 발로 헤엄쳤어요."},
-  {f:"allosaurus", e:"🦖", n:"알로사우루스", d:"쥐라기 시대 최고의 사냥꾼이에요. 눈 위에 작은 뿔이 있고, 톱니 같은 이빨이 많아요."},
-  {f:"parasaurolophus", e:"🦕", n:"파라사우롤로푸스", d:"머리 뒤로 길게 뻗은 관 모양 볏이 있어요. 이 볏으로 '뿌우' 하고 나팔 소리를 냈을지도 몰라요."},
-  {f:"pachycephalosaurus", e:"🦕", n:"파키케팔로사우루스", d:"머리뼈가 아주 두껍고 단단한 박치기 대장이에요. 머리 둘레에 작은 혹과 가시가 있어요."},
-  {f:"pteranodon", e:"🐉", n:"프테라노돈", d:"하늘을 날던 익룡이에요. 공룡은 아니지만 공룡과 같은 시대에 살았어요. 날개를 펴면 자동차보다 길어요."},
-  {f:"ankylosaurus", e:"🐢", n:"안킬로사우루스", d:"온몸이 단단한 갑옷으로 덮여 있어요. 꼬리 끝에는 커다란 곤봉이 있어서 쿵 하고 휘둘렀어요."},
-  {f:"velociraptor", e:"🦖", n:"벨로키랍토르", d:"칠면조만 한 크기에 깃털이 있었어요. 아주 영리하고 발에 갈고리 같은 큰 발톱이 있어요."},
-  {f:"spinosaurus", e:"🦖", n:"스피노사우루스", d:"등에 커다란 돛이 달려 있어요. 물가에 살면서 물고기를 잡아먹었고, 티라노사우루스보다 몸이 길어요."},
-  {f:"stegosaurus", e:"🦕", n:"스테고사우루스", d:"등에 커다란 뼈 판이 줄지어 있고, 꼬리 끝에 뾰족한 가시가 네 개 있어요. 몸에 비해 뇌는 아주 작았어요."},
-  {f:"brachiosaurus", e:"🦕", n:"브라키오사우루스", d:"앞다리가 뒷다리보다 길어서 기린처럼 목을 높이 들 수 있어요. 높은 나무의 잎을 냠냠 먹었어요."},
-  {f:"triceratops", e:"🦕", n:"트리케라톱스", d:"얼굴에 뿔이 세 개, 머리 뒤에 커다란 목도리가 있어요. 무리를 지어 다니며 서로를 지켰어요."},
-  {f:"tyrannosaurus", e:"🦖", n:"티라노사우루스", d:"공룡의 왕! 바나나만 한 이빨과 아주 센 턱을 가졌어요. 팔은 짧지만 다리와 꼬리가 아주 튼튼해요."}
+/* 낱말 미션: 한 미션에 단어 하나. 주제별 묶음으로 보여 준다.
+   예전에는 한 미션에 단어가 2~3개였다(w1 "낱말 나무 오리" 등). 그 id 뒤에 _번호를 붙여 단어 미션 id로 쓴다 (w1 → w1_1 나무, w1_2 오리).
+   OLD_WORD는 예전 미션의 단어 목록이고, 기존 기록을 옮길 때 쓴다 */
+const OLD_WORD = {
+  w1:["나무","오리"], w2:["바다","하마"], w3:["사자","기차"],
+  w4:["아빠","아기","오빠"], w5:["머리","다리","이마"], w6:["여우","나비","거미"], w7:["포도","사과","배"],
+  w8:["바나나","토마토","고구마"], w9:["두더지","개구리","너구리"], w10:["공룡","로봇","기린"],
+  w11:["사탕","우산","연필"], w12:["장군","방패","깃발"]
+};
+const WORD_GROUPS = [
+  {g:"first", theme:"처음 낱말", old:["w1","w2","w3"]},
+  {g:"w4", theme:"가족", old:["w4"]}, {g:"w5", theme:"내 몸", old:["w5"]}, {g:"w6", theme:"동물", old:["w6"]},
+  {g:"w7", theme:"과일", old:["w7"]}, {g:"w8", theme:"맛있는 것", old:["w8"]}, {g:"w9", theme:"동물 친구", old:["w9"]},
+  {g:"w10", theme:"게임 친구들", old:["w10"]}, {g:"w11", theme:"내 물건", old:["w11"]}, {g:"w12", theme:"삼국지", old:["w12"]}
+];
+WORD_GROUPS.forEach(G => G.old.forEach(o => OLD_WORD[o].forEach((w, k) =>
+  BASE.push({id: o + "_" + (k + 1), cat:"word", group:G.g, theme:G.theme, title:w, items:[w]}))));
+/* 상대 40명: 공룡 20 → 로봇 10 → 삼국지 10. 설명은 docs 문서의 문장 그대로.
+   그림은 images/<종류 폴더>/<f>_angry.jpg, _friendly.jpg */
+const FOES = [
+  {t:"dino", f:"01_koreanosaurus", n:"코리아노사우루스", d:"우리나라 전라남도 보성에서 화석이 발견된 공룡이에요. 이름에 \"코리아\"가 들어 있어요. 몸집은 작고 두 발로 빠르게 걸으며 풀을 먹었어요."},
+  {t:"dino", f:"02_protoceratops", n:"프로토케라톱스", d:"트리케라톱스의 먼 친척이에요. 뿔은 없지만 목 뒤에 작은 방패가 있어요. 몸집은 양 정도로 작았고 몽골의 사막에서 살았어요."},
+  {t:"dino", f:"03_giganotosaurus", n:"기가노토사우루스", d:"남아메리카에 살았던 아주 큰 육식 공룡이에요. 몸길이가 티라노사우루스와 비슷하거나 조금 더 길었어요. 이름은 \"남쪽의 거대한 도마뱀\"이라는 뜻이에요."},
+  {t:"dino", f:"04_dilophosaurus", n:"딜로포사우루스", d:"머리 위에 얇은 볏이 두 줄 나란히 서 있는 공룡이에요. 이름도 \"볏이 두 개인 도마뱀\"이라는 뜻이에요. 날렵한 몸으로 사냥을 했어요."},
+  {t:"dino", f:"05_therizinosaurus", n:"테리지노사우루스", d:"손톱이 어른 팔 길이만큼 길었던 공룡이에요. 무섭게 생겼지만 사실은 풀을 먹었어요. 긴 손톱으로 나뭇가지를 끌어당겨 잎을 먹었을 거예요."},
+  {t:"dino", f:"06_iguanodon", n:"이구아노돈", d:"엄지손가락에 뾰족한 가시가 달린 공룡이에요. 아주 오래전에 두 번째로 이름이 붙은 공룡이라 공룡 연구의 역사에서 유명해요. 무리 지어 풀을 먹었어요."},
+  {t:"dino", f:"07_diplodocus", n:"디플로도쿠스", d:"목도 길고 꼬리는 더 길었던 공룡이에요. 몸길이가 버스 2대를 이은 것보다 길었어요. 꼬리를 채찍처럼 휘둘러 적을 쫓아냈을 거예요."},
+  {t:"dino", f:"08_carnotaurus", n:"카르노타우루스", d:"눈 위에 황소처럼 뿔이 두 개 난 육식 공룡이에요. 이름도 \"고기를 먹는 황소\"라는 뜻이에요. 앞발은 아주 작았지만 다리가 튼튼해서 빨리 달렸어요."},
+  {t:"dino", f:"09_mosasaurus", n:"모사사우루스", d:"공룡 시대 바다에 살았던 거대한 파충류예요. 공룡은 아니지만 공룡과 같은 시대를 산 친척이에요. 지느러미로 헤엄치며 물고기와 거북을 잡아먹었어요."},
+  {t:"dino", f:"10_allosaurus", n:"알로사우루스", d:"쥐라기에 살았던 사냥꾼 공룡이에요. 눈 위에 작은 뿔이 있고, 티라노보다 앞발이 길고 손가락이 세 개였어요. 티라노보다 훨씬 먼저 살았어요."},
+  {t:"dino", f:"11_parasaurolophus", n:"파라사우롤로푸스", d:"머리 뒤로 길게 뻗은 관 모양의 볏이 있는 공룡이에요. 이 볏 속이 비어 있어서 나팔처럼 \"뿌우\" 소리를 내 친구들을 불렀을 거예요."},
+  {t:"dino", f:"12_pachycephalosaurus", n:"파키케팔로사우루스", d:"머리뼈가 아주 두껍고 둥글게 솟아 있는 공룡이에요. 머리 둘레에는 울퉁불퉁한 혹과 작은 가시가 있어요. 박치기 공룡으로 유명해요."},
+  {t:"dino", f:"13_pteranodon", n:"프테라노돈", d:"하늘을 날던 파충류예요. 공룡은 아니지만 공룡과 같은 시대를 산 친척이에요. 날개를 펴면 어른 3명이 나란히 누운 것보다 넓었고, 이빨 없이 물고기를 삼켰어요."},
+  {t:"dino", f:"14_ankylosaurus", n:"안킬로사우루스", d:"등 전체가 단단한 갑옷으로 덮인 공룡이에요. 꼬리 끝에는 망치 같은 곤봉이 있어서 육식 공룡도 함부로 덤비지 못했어요."},
+  {t:"dino", f:"15_velociraptor", n:"벨로키랍토르", d:"칠면조만 한 작은 공룡이지만 아주 빠르고 똑똑했어요. 몸에 깃털이 있었고, 발에 커다란 갈고리 발톱이 있었어요."},
+  {t:"dino", f:"16_spinosaurus", n:"스피노사우루스", d:"등에 커다란 돛이 달린 공룡이에요. 가장 길었던 육식 공룡 중 하나예요. 악어처럼 긴 주둥이로 물속의 커다란 물고기를 잡아먹었어요."},
+  {t:"dino", f:"17_stegosaurus", n:"스테고사우루스", d:"등에 커다란 판이 두 줄로 늘어서 있고, 꼬리 끝에 뾰족한 가시가 4개 있어요. 몸은 버스만큼 컸지만 뇌는 호두만큼 작았다고 해요."},
+  {t:"dino", f:"18_brachiosaurus", n:"브라키오사우루스", d:"목이 아주 길어서 4층 건물 높이의 나뭇잎까지 먹을 수 있었어요. 앞다리가 뒷다리보다 길어서 기린처럼 몸이 앞쪽으로 높았어요."},
+  {t:"dino", f:"19_triceratops", n:"트리케라톱스", d:"얼굴에 뿔이 3개, 목 뒤에 커다란 방패가 있는 공룡이에요. 이름도 \"뿔이 세 개 달린 얼굴\"이라는 뜻이에요. 티라노사우루스와 같은 시대에 살았어요."},
+  {t:"dino", f:"20_tyrannosaurus", n:"티라노사우루스", d:"공룡의 왕이라고 불리는 가장 유명한 육식 공룡이에요. 이빨 하나가 바나나만큼 컸고, 무는 힘이 아주 셌어요. 앞발은 짧지만 아주 튼튼했어요."},
+  {t:"robot", f:"r01_kongkongball", n:"콩콩볼", d:"공에서 변신하는 꼬마 로봇이에요. 데굴데굴 굴러가다가 \"콩!\" 하고 튀어 오르면 팔다리가 쏙 나와요. 몸집은 제일 작지만 점프는 제일 잘해요."},
+  {t:"robot", f:"r02_cosmo", n:"별탐사봇 코스모", d:"우주를 여행하며 반짝이는 별 조각을 모으는 탐사 로봇이에요. 등에 달린 작은 로켓으로 하늘을 날고, 가슴의 레이더로 길을 찾아요."},
+  {t:"robot", f:"r03_pokri", n:"굴착대장 포크리", d:"한쪽 팔이 굴착기로 된 힘센 건설 로봇이에요. 무너진 길도 뚝딱 고치고, 무거운 바위도 번쩍 들어 올려요."},
+  {t:"robot", f:"r04_guardon", n:"경찰로봇 가드온", d:"마을을 지키는 경찰 로봇이에요. 머리의 경광등이 번쩍이면 출동 신호예요. 커다란 방패로 친구들을 지켜 줘요."},
+  {t:"robot", f:"r05_bulkkeumi", n:"구조대장 불끄미", d:"불이 나면 가장 먼저 달려가는 소방 구조 로봇이에요. 등에 접힌 사다리를 펴서 높은 곳의 친구를 구하고, 손에서 물대포를 쏴요."},
+  {t:"robot", f:"r06_syungsyungjet", n:"슝슝제트", d:"제트기에서 변신하는 하늘 로봇이에요. 날개를 등 뒤로 접으면 로봇, 펼치면 제트기가 돼요. 구름보다 빠르게 날아요."},
+  {t:"robot", f:"r07_burungred", n:"부릉레드", d:"빨간 스포츠카에서 변신하는 로봇이에요. 바퀴가 어깨와 다리에 달려 있어서 로봇이 되어도 쌩쌩 달릴 수 있어요."},
+  {t:"robot", f:"r08_mecharex", n:"메카렉스", d:"공룡 친구 티라노사우루스를 닮은 공룡 메카 로봇이에요. 꼬리를 휘두르고 강철 이빨로 \"크아앙!\" 하고 포효해요. 공룡을 다 모은 친구에게 찾아와요."},
+  {t:"robot", f:"r09_taekwonking", n:"검은띠 태권왕", d:"검은띠를 맨 태권도 로봇이에요. 돌려차기와 정권 지르기가 특기예요. 싸우기 전에는 언제나 고개 숙여 인사하는 예의 바른 무술 로봇이에요."},
+  {t:"robot", f:"r10_ultraking", n:"합체킹 울트라", d:"지금까지 만난 로봇 친구들이 하나로 합체한 최강 로봇이에요. 마지막 보스예요. 이 로봇까지 친구가 되면 진짜 글씨 탐험 대장이에요!"},
+  {t:"samguk", f:"s01_zhouyu", n:"주유", d:"오나라의 젊고 잘생긴 장수예요. 적벽대전에서 불붙인 배를 보내 조조의 큰 배들을 물리쳤어요. 음악도 아주 잘 알아서, 연주가 틀리면 바로 알아챘대요."},
+  {t:"samguk", f:"s02_huangzhong", n:"황충", d:"흰 수염이 멋진 할아버지 장수예요. 나이가 많아도 활을 쏘면 백발백중이었어요. \"나이는 숫자일 뿐!\"을 보여 준 촉나라의 다섯 호랑이 장군 중 한 명이에요."},
+  {t:"samguk", f:"s03_machao", n:"마초", d:"반짝이는 흰 갑옷을 입은 젊은 용사예요. 사자 얼굴이 새겨진 투구를 쓰고 창을 휘둘렀어요. 너무 멋져서 \"비단 마초\"라고 불렸어요."},
+  {t:"samguk", f:"s04_caocao", n:"조조", d:"위나라를 세운 똑똑하고 강한 대장이에요. 시도 잘 쓰고, 재주 있는 사람을 아주 아꼈어요. 유비 삼형제의 가장 큰 라이벌이에요."},
+  {t:"samguk", f:"s05_lvbu", n:"여포", d:"삼국지에서 가장 힘이 센 장수예요. \"사람 중에는 여포, 말 중에는 적토마\"라는 말이 있을 만큼 유명했어요. 긴 꿩 깃털이 달린 투구가 트레이드마크예요."},
+  {t:"samguk", f:"s06_liubei", n:"유비", d:"도원결의 삼형제의 맏형이에요. 마음이 따뜻해서 백성들이 모두 좋아했어요. 제갈량을 모시려고 세 번이나 찾아간 이야기가 유명해요."},
+  {t:"samguk", f:"s07_zhangfei", n:"장비", d:"삼형제의 막내로, 호랑이처럼 무서운 수염과 큰 눈을 가졌어요. 다리 위에서 \"덤벼라!\" 하고 외치자 적군이 무서워서 도망갔어요."},
+  {t:"samguk", f:"s08_zhugeliang", n:"제갈량", d:"바람도 부른다는 지혜의 천재 군사예요. 유비가 세 번이나 찾아와서야 함께하기로 했어요. 깃털 부채를 들고 놀라운 작전을 척척 생각해 냈어요."},
+  {t:"samguk", f:"s09_zhaozilong", n:"조자룡", d:"은빛 갑옷과 흰 말이 멋진 용감한 장수예요. 유비의 아기 아들을 품에 안고 수많은 적군 사이를 혼자 뚫고 나왔어요. 이름은 조운, 자는 자룡이에요."},
+  {t:"samguk", f:"s10_guanyu", n:"관우", d:"의리와 힘을 모두 가진 최고의 장수예요. 붉은 얼굴과 아주 긴 수염 때문에 \"수염이 아름다운 장수\"라고 불렸어요. 무거운 청룡언월도를 가볍게 휘둘렀어요."}
 ];
 
 /* 스킬 레벨: 쓴 횟수에 따라 레벨과 데미지가 오른다 */
@@ -286,21 +373,126 @@ const $view = document.getElementById("view");
 const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 const fmtDate = t => { const d = new Date(t); return (d.getMonth()+1)+"월 "+d.getDate()+"일"; };
 
+/* 우리집 미션: 저장은 예전처럼 {id, title, items}(묶음) 하나로 하고, 화면과 기록은 글자·낱말 하나씩 나눈 미션으로 쓴다.
+   항목이 둘 이상이면 id_1, id_2 …, 하나면 id 그대로 */
+const customSplit = c => c.items.length > 1
+  ? c.items.map((it, k) => ({id: c.id + "_" + (k + 1), cat:"custom", group:c.id, theme:c.title, title:it, items:[it]}))
+  : [{id: c.id, cat:"custom", group:c.id, theme:c.title, title:c.items[0] || c.title, items:c.items.slice()}];
 function allMissions(){
   const list = BASE.slice();
   if (state.name) list.push({id:"me",cat:"word",title:"내 이름 쓰기",items:[state.name]});
-  (state.custom||[]).forEach(m => list.push(m));
+  (state.custom||[]).forEach(c => list.push(...customSplit(c)));
   return list;
 }
 const missionById = id => allMissions().find(m => m.id === id);
 const charsOf = m => Array.from(new Set(Array.from(m.items.join(""))));
 const doneCount = () => allMissions().filter(m => state.done[m.id]).length;
+/* 낱말 미션인가 (연습 횟수, 연습장 화면에 쓴다): 낱말, 내 이름, 두 글자 이상 우리집 미션 */
+const isWordMission = m => m.cat === "word" || (m.cat === "custom" && Array.from(m.items[0] || "").length >= 2);
 
-function practiceMap(done){
+/* 미션의 경험치. 예전 기록에는 xp가 없으므로 완료 횟수를 그대로 경험치로 쓴다 */
+const xpOf = d => d ? (d.xp != null ? d.xp : d.count) : 0;
+/* 글자별 경험치. state.xpAdj는 낱말 미션을 나눌 때 생긴 차이를 맞춰 주는 보정값(아래 migrateSplit 참고) */
+function practiceMap(done, noAdj){
   done = done || state.done;
   const p = {};
-  allMissions().forEach(m => { const d = done[m.id]; if (!d) return; charsOf(m).forEach(c => p[c] = (p[c]||0) + d.count); });
+  allMissions().forEach(m => { const d = done[m.id]; if (!d) return; charsOf(m).forEach(c => p[c] = (p[c]||0) + xpOf(d)); });
+  if (!noAdj && state.xpAdj) Object.keys(state.xpAdj).forEach(c => { if (p[c] != null) p[c] = Math.max(0, p[c] + state.xpAdj[c]); });
   return p;
+}
+/* 기존 기록 옮기기 (한 번만): 여러 단어짜리 낱말 미션과 우리집 미션을 단어 하나씩 나눈 미션으로.
+   예전 미션을 n번 했으면 나뉜 미션마다 n번(같은 경험치, 같은 날짜)으로 옮긴다.
+   한 미션 안 두 단어에 같은 글자가 있으면(토마토, 고구마의 마) 나눈 뒤 그 글자가 두 번 세어져 레벨이 오르므로,
+   옮기기 전과 뒤의 글자별 경험치 차이를 state.xpAdj에 저장해 빼 준다. 그래서 모든 글자 레벨이 그대로다. */
+function migrateSplit(){
+  if (state.split >= 2) return false;
+  const done = state.done || {};
+  // 옮기기 전 글자별 경험치 (예전 미션 구성으로 계산)
+  const oldMissions = BASE.filter(m => m.cat !== "word").map(m => ({id:m.id, items:m.items}));
+  Object.keys(OLD_WORD).forEach(o => oldMissions.push({id:o, items:OLD_WORD[o]}));
+  if (state.name) oldMissions.push({id:"me", items:[state.name]});
+  (state.custom || []).forEach(c => oldMissions.push({id:c.id, items:c.items}));
+  const before = {};
+  oldMissions.forEach(m => { const d = done[m.id]; if (!d) return; charsOf(m).forEach(c => before[c] = (before[c]||0) + xpOf(d)); });
+  // 기록 옮기기
+  const today = state.today && state.today.n ? state.today.n : null;
+  const move = (oldId, newIds) => {
+    const d = done[oldId];
+    if (d) newIds.forEach(id => { if (!done[id]) done[id] = Object.assign({}, d, {xp: xpOf(d)}); });
+    if (today && today[oldId]) newIds.forEach(id => { today[id] = today[oldId]; });
+    if (newIds.indexOf(oldId) < 0){ delete done[oldId]; if (today) delete today[oldId]; }
+  };
+  Object.keys(OLD_WORD).forEach(o => move(o, OLD_WORD[o].map((w, k) => o + "_" + (k + 1))));
+  (state.custom || []).forEach(c => { if (c.items.length > 1) move(c.id, customSplit(c).map(m => m.id)); });
+  state.done = done;
+  // 옮긴 뒤 글자별 경험치와 비교해서 보정값 저장
+  const after = practiceMap(done, true), adj = {};
+  Object.keys(after).forEach(c => { const diff = (before[c] || 0) - after[c]; if (Math.abs(diff) > 1e-9) adj[c] = diff; });
+  state.xpAdj = Object.assign(state.xpAdj || {}, adj);
+  state.split = 2;
+  return true;
+}
+const fmtN = n => String(Math.round(n * 10) / 10);   // 2.5처럼 소수 한 자리까지
+
+/* ================= 다양하게 연습하기 ================= */
+/* 같은 미션 하루 반복: 첫 번째 그대로, 두 번째 절반, 세 번째부터 경험치 0 데미지 4분의 1 */
+const REPEAT = [
+  {xp:1,   dmg:1,    label:""},
+  {xp:0.5, dmg:0.5,  label:"경험치 ½ · 데미지 ½"},
+  {xp:0,   dmg:0.25, label:"경험치 0 · 데미지 ¼"}
+];
+const WEAK_MULT = 3;           // 약점 글자 공격 배수
+const WEAK_COUNT = 3;          // 상대마다 약점 글자 수
+const dayKey = t => { const d = new Date(t || Date.now()); return d.getFullYear() + "-" + (d.getMonth()+1) + "-" + d.getDate(); };
+function timesToday(id){ const t = state.today; return t && t.d === dayKey() ? (t.n[id] || 0) : 0; }
+const repeatOf = id => REPEAT[Math.min(timesToday(id), REPEAT.length - 1)];
+function countToday(id){
+  if (!state.today || state.today.d !== dayKey()) state.today = {d: dayKey(), n:{}};
+  state.today.n[id] = (state.today.n[id] || 0) + 1;
+}
+const TIRED_MSG = "오늘 지친 스킬 💤, 내일 다시 힘이 나요";
+
+/* 약점 글자 고르기: 아직 안 배운 글자 먼저(무작위), 그다음 가장 오래 안 쓴 글자.
+   한 미션에 약점 글자가 두 개 들어가지 않게 골라서 여러 미션을 하게 만든다 */
+function charLastUsed(){
+  const t = {};
+  allMissions().forEach(m => { const d = state.done[m.id]; if (!d) return; charsOf(m).forEach(c => { t[c] = Math.max(t[c] || 0, d.last || 0); }); });
+  return t;
+}
+function pickWeak(){
+  const p = practiceMap(), last = charLastUsed(), ms = allMissions().map(charsOf);
+  const cand = skillGroups().flatMap(g => g.chars).filter(c => ms.some(cs => cs.includes(c))).map(c => ({c, r: Math.random()}));
+  cand.sort((a, b) => {
+    const la = (p[a.c] || 0) > 0, lb = (p[b.c] || 0) > 0;
+    if (la !== lb) return la ? 1 : -1;
+    if (!la) return a.r - b.r;
+    return (last[a.c] || 0) - (last[b.c] || 0) || a.r - b.r;
+  });
+  const together = (x, y) => ms.some(cs => cs.includes(x) && cs.includes(y));
+  const picked = [];
+  cand.forEach(({c}) => { if (picked.length < WEAK_COUNT && !picked.some(q => together(q, c))) picked.push(c); });
+  cand.forEach(({c}) => { if (picked.length < WEAK_COUNT && !picked.includes(c)) picked.push(c); });
+  return picked;
+}
+/* 단어 합체: 낱말 미션(내 이름 포함)의 낱말, 우리집 미션의 두 글자 이상 낱말은 합체 카드로 공격 */
+const COMBO = [1, 1, 1.25, 1.5, 1.75, 2];          // 글자 수별 합체 보너스 (5글자 이상 2배)
+const comboOf = n => COMBO[Math.min(n, COMBO.length - 1)];
+const isWordItem = (m, it) => m.cat === "word" || (m.cat === "custom" && Array.from(it).length >= 2);
+/* 단어의 지금 데미지(약점과 지침 빼고). 같은 글자가 두 번 나오면 두 번 더한다 (바나나의 나) */
+function wordPower(word, p){
+  const cs = Array.from(word), raw = cs.reduce((a, c) => a + skillInfo(c, p).dmg, 0), combo = comboOf(cs.length);
+  return {raw, combo, dmg: Math.round(raw * combo)};
+}
+function ensureWeak(){
+  if (!state.boss.weak || !state.boss.weak.length){ state.boss.weak = pickWeak(); persist(); }
+  return state.boss.weak;
+}
+const isWeak = c => (state.boss.weak || []).includes(c);
+/* 약점 글자를 연습할 미션: 오늘 덜 한 미션, 그다음 목록 앞쪽 */
+function missionForChar(c){
+  const ms = allMissions().filter(m => charsOf(m).includes(c));
+  ms.sort((a, b) => timesToday(a.id) - timesToday(b.id));
+  return ms[0] || null;
 }
 function skillGroups(){
   const seen = new Set();
@@ -324,20 +516,29 @@ function skillInfo(c, p){
   return {c, n, lv, dmg:DMG[lv], next, left: next ? next - n : 0, xp};
 }
 function latestHandwriting(c){ const r = records.find(r => r.label === c); return r ? r.img : null; }
+/* 상대 종류: 그림 폴더, 대신 쓸 이모지, 부르는 말, 세는 말 */
+const TYPES = {
+  dino:   {dir:"dinos",  e:"🦖", name:"공룡",       group:"공룡",   unit:"마리", appear:"장난꾸러기 공룡이 나타났다!"},
+  robot:  {dir:"robots", e:"🤖", name:"로봇",       group:"로봇",   unit:"대",   appear:"장난꾸러기 로봇이 나타났다!"},
+  samguk: {dir:"samguk", e:"⚔️", name:"삼국지 장수", group:"삼국지", unit:"명",   appear:"삼국지 장수가 나타났다!"}
+};
+const TYPE_ORDER = ["dino", "robot", "samguk"];
 function dinoAt(i){
-  const k = i % DINOS.length, d = DINOS[k], lap = Math.floor(i / DINOS.length);
-  const base = "images/dinos/" + String(k+1).padStart(2,"0") + "_" + d.f;
-  // 2회차부터는 "강해진" 공룡. HP는 bossHP(i)대로 계속 오른다
+  const k = i % FOES.length, d = FOES[k], lap = Math.floor(i / FOES.length), ty = TYPES[d.t];
+  const base = "images/" + ty.dir + "/" + d.f;
+  // 40명을 모두 친구로 만든 뒤에는 "강해진" 상대로 다시 시작. HP는 bossHP(i)대로 계속 오른다
   const pre = lap === 0 ? "" : lap === 1 ? "강해진 " : "엄청 강해진 ";
-  return {i, k, lap, e:d.e, base:d.n, n:pre + d.n, d:d.d, angry:base+"_angry.jpg", friendly:base+"_friendly.jpg"};
+  return {i, k, lap, t:d.t, ty, e:ty.e, base:d.n, n:pre + d.n, d:d.d, angry:base+"_angry.jpg", friendly:base+"_friendly.jpg"};
 }
-const lapLabel = d => d.lap ? `💪 ${d.lap+1}회차 ${d.k+1}번째 공룡` : `${d.k+1}번째 공룡`;
+const lapLabel = d => d.lap ? `💪 ${d.lap+1}회차 ${d.k+1}번째 상대` : `${d.k+1}번째 상대`;
+/* 이 번호가 종류 묶음의 마지막(공룡 20번째, 로봇 10번째, 삼국지 10번째)인가 */
+const lastOfGroup = k => k === FOES.length - 1 || FOES[k+1].t !== FOES[k].t;
 /* 받침이 있으면 a(이/은), 없으면 b(가/는) */
 function josa(w, a, b){ const c = String(w).charCodeAt(String(w).length-1); return (c >= 0xAC00 && c <= 0xD7A3 && (c-0xAC00)%28) ? a : b; }
-/* 공룡 그림. 그림이 없으면 이모지로 바꿔 보여 준다 */
+/* 상대 그림. 그림이 없으면 종류에 맞는 이모지로 바꿔 보여 준다 */
 function dinoImg(d, kind, cls, extra){
   const img = `<img class="dimg ${cls||""}" src="${kind === "angry" ? d.angry : d.friendly}" alt="${esc(d.n)}" data-e="${d.e}" onerror="dinoImgFail(this)" ${extra||""}>`;
-  // 2회차 이상 화난 공룡은 몸 주위에 빨간 기운
+  // 2회차 이상 화난 상대는 몸 주위에 빨간 기운
   return d.lap && kind === "angry" ? `<span class="aura">${img}</span>` : img;
 }
 function dinoImgFail(img){
@@ -613,6 +814,18 @@ function skillCardHTML(s, opts){
 }
 
 /* ================= 홈 ================= */
+/* 약점 글자 카드: 글자를 누르면 그 글자가 들어 있는 미션으로 간다 */
+function weakCardHTML(mon){
+  const weak = ensureWeak();
+  if (!weak.length) return "";
+  return `<div class="card center weakcard">
+    <div style="font-size:21px">🎯 ${esc(mon.n)}의 약점 글자</div>
+    <div class="note">이 글자로 공격하면 데미지 <b>${WEAK_MULT}배</b>! 글자를 누르면 연습하러 가요.</div>
+    <div class="wchars">${weak.map(c => { const m = missionForChar(c);
+      return m ? `<button data-open="${esc(m.id)}">${esc(c)}<span>${esc(m.title)}</span></button>`
+               : `<button disabled>${esc(c)}</button>`; }).join("")}</div>
+  </div>`;
+}
 function renderHome(){
   const p = practiceMap(), all = allMissions();
   const learned = Object.keys(p).filter(c => p[c] > 0).length;
@@ -645,19 +858,64 @@ function renderHome(){
         <div class="note">HP ${left} / ${hp} · 미션을 끝내면 스킬로 공격할 수 있어요!</div>
       </div>
     </div>
+    ${weakCardHTML(mon)}
     <div class="stats">
       <div class="stat"><b>📋 ${doneCount()}/${all.length}</b><span>완료한 미션</span></div>
       <div class="stat"><b>📖 ${learned}/${totalSkills()}</b><span>배운 스킬</span></div>
       <div class="stat"><b>⭐ ${state.events||0}</b><span>인증 횟수</span></div>
-      <div class="stat"><b>🦕 ${b.idx}</b><span>공룡 친구</span></div>
+      <div class="stat"><b>🏅 ${b.idx}</b><span>친구</span></div>
     </div>
     <div class="two">${pickCard(learn,"new")}${pickCard(power,"up")}</div>
     <div class="card note center" style="font-size:15px">✨ 새 글자를 쓰면 <b>새 스킬</b>이 생기고, 💪 같은 글자를 또 쓰면 <b>스킬 레벨과 데미지</b>가 올라가요.</div>`;
 }
 
 /* ================= 미션 목록 ================= */
+let missionGroup = null;   // 낱말·우리집 미션에서 지금 열어 본 주제 묶음
+function missionCardHTML(m, p){
+  const st = state.done[m.id], s = missionStatus(m, p), rep = repeatOf(m.id);
+  const weakIn = charsOf(m).filter(isWeak);
+  const badge = s.fresh ? `<span class="badge new">✨ 새 스킬 ${s.fresh}개</span>`
+    : s.maxed ? `<span class="badge up">👑 모두 MAX</span>`
+    : `<span class="badge up">💪 평균 Lv.${s.avg.toFixed(1).replace(".0","")}</span>`;
+  const head = m.group ? m.theme : m.title;   // 묶음 안 단어 미션은 위에 주제 이름, 가운데에 단어
+  return `<button class="mcard ${st?"done":""}" data-open="${esc(m.id)}">
+    <div class="t">${st ? "✅ " : ""}${esc(head)}</div>
+    <div class="chars">${m.items.map(esc).join(" ")}</div>
+    ${badge}${weakIn.length ? ` <span class="badge" style="background:#FFE4E4;color:#C62828">🎯 약점 ${weakIn.map(esc).join(" ")}</span>` : ""}
+    ${st ? `<div class="note" style="margin-top:4px">${st.count}번 · 마지막 ${fmtDate(st.last)}</div>` : ""}
+    ${rep !== REPEAT[0] ? `<div class="tired">${TIRED_MSG}<br>지금 하면 ${rep.label}</div>` : ""}
+  </button>`;
+}
+/* 주제 묶음 카드: "3개 중 1개 완료", 묶음 안의 새 스킬, 약점, 지친 미션 수 */
+function groupCardHTML(g, ms, p){
+  const doneN = ms.filter(m => state.done[m.id]).length;
+  const fresh = new Set(ms.flatMap(m => charsOf(m).filter(c => !p[c]))).size;
+  const weak = Array.from(new Set(ms.flatMap(m => charsOf(m).filter(isWeak))));
+  const tired = ms.filter(m => repeatOf(m.id) !== REPEAT[0]).length;
+  return `<button class="mcard gcard ${doneN === ms.length ? "done" : ""}" data-grp="${esc(g)}">
+    <div class="t">${doneN === ms.length ? "✅ " : "📚 "}${esc(ms[0].theme)}</div>
+    <div class="chars" style="font-size:22px">${ms.map(m => esc(m.items.join(" "))).join(" · ")}</div>
+    <div class="bar" style="height:10px;margin:6px 0 4px"><i style="width:${doneN / ms.length * 100}%"></i></div>
+    <div class="note" style="margin:0 0 4px"><b>${ms.length}개 중 ${doneN}개 완료</b></div>
+    ${fresh ? `<span class="badge new">✨ 새 스킬 ${fresh}개</span> ` : ""}${weak.length ? `<span class="badge" style="background:#FFE4E4;color:#C62828">🎯 약점 ${weak.map(esc).join(" ")}</span> ` : ""}${tired ? `<span class="badge" style="background:#EEF0FF;color:#4B4FA8">💤 ${tired}개</span>` : ""}
+  </button>`;
+}
 function renderMissions(){
   const all = allMissions(), p = practiceMap();
+  // 묶음 하나를 열어 본 화면
+  if (missionGroup){
+    const ms = all.filter(m => m.group === missionGroup);
+    if (ms.length){
+      const doneN = ms.filter(m => state.done[m.id]).length;
+      $view.innerHTML = `<div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+          <button class="btn ghost small" id="grpBack">← 낱말 묶음</button>
+          <div style="font-size:22px">📚 ${esc(ms[0].theme)} <span class="note" style="font-size:16px">${ms.length}개 중 ${doneN}개 완료</span></div></div>
+        <div class="mgrid">${ms.map(m => missionCardHTML(m, p)).join("")}</div>`;
+      document.getElementById("grpBack").onclick = () => { missionGroup = null; renderMissions(); window.scrollTo(0, 0); };
+      return;
+    }
+    missionGroup = null;
+  }
   let html = `<div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
     <div style="font-size:20px">완료한 미션 <b style="font-weight:400;color:var(--green);font-size:26px">${doneCount()}</b> / ${all.length}개</div>
     <div class="row"><span class="badge new" style="font-size:14px;padding:4px 10px;border-radius:999px">✨ 새 스킬</span><span class="badge up" style="font-size:14px;padding:4px 10px;border-radius:999px">💪 강화</span></div></div>`;
@@ -666,17 +924,13 @@ function renderMissions(){
     if (!ms.length && k !== "word") return;
     const d = ms.filter(m => state.done[m.id]).length;
     html += `<div class="sec-title">${CATS[k].name} <span class="chip" style="background:${CATS[k].color}">${d}/${ms.length}</span></div><div class="mgrid">`;
+    // 묶음이 있는 미션은 묶음 카드 하나로, 없는 미션(내 이름 쓰기 등)은 그대로
+    const seen = new Set();
     ms.forEach(m => {
-      const st = state.done[m.id], s = missionStatus(m, p);
-      const badge = s.fresh ? `<span class="badge new">✨ 새 스킬 ${s.fresh}개</span>`
-        : s.maxed ? `<span class="badge up">👑 모두 MAX</span>`
-        : `<span class="badge up">💪 평균 Lv.${s.avg.toFixed(1).replace(".0","")}</span>`;
-      html += `<button class="mcard ${st?"done":""}" data-open="${esc(m.id)}">
-        <div class="t">${st ? "✅ " : ""}${esc(m.title)}</div>
-        <div class="chars">${m.items.map(esc).join(" ")}</div>
-        ${badge}
-        ${st ? `<div class="note" style="margin-top:4px">${st.count}번 · 마지막 ${fmtDate(st.last)}</div>` : ""}
-      </button>`;
+      if (!m.group) { html += missionCardHTML(m, p); return; }
+      if (seen.has(m.group)) return;
+      seen.add(m.group);
+      html += groupCardHTML(m.group, ms.filter(x => x.group === m.group), p);
     });
     if (k === "word" && !state.name){
       html += `<button class="mcard locked" data-go="parent"><div class="t">내 이름 쓰기</div><div class="chars">🔒</div><div class="note">어른 메뉴에서 이름을 넣으면 열려요</div></button>`;
@@ -684,6 +938,7 @@ function renderMissions(){
     html += `</div>`;
   });
   $view.innerHTML = html;
+  $view.querySelectorAll("[data-grp]").forEach(b => b.onclick = () => { missionGroup = b.dataset.grp; renderMissions(); window.scrollTo(0, 0); });
 }
 
 /* ================= 스킬북 ================= */
@@ -692,7 +947,7 @@ function renderSkills(){
   const learned = Object.keys(p).filter(c => p[c] > 0).length;
   let html = `<div class="card">
     <div style="font-size:22px">📖 ${state.name ? esc(state.name)+"의 " : ""}스킬북 <span class="note">배운 스킬 ${learned} / ${totalSkills()}</span></div>
-    <div class="note">카드를 누르면 다음 레벨까지 몇 번 더 써야 하는지, 내가 쓴 글씨가 어떻게 변했는지 볼 수 있어요.</div>
+    <div class="note">카드를 누르면 다음 레벨까지 경험치가 얼마나 더 필요한지, 내가 쓴 글씨가 어떻게 변했는지 볼 수 있어요.</div>
     <div class="legend">${GRADE.slice(1).map((g,i)=>`<span style="background:${g.c}">${g.i} Lv.${i+1} ${g.n} · ⚔️${DMG[i+1]}</span>`).join("")}</div>
   </div>`;
   skillGroups().forEach(g => {
@@ -702,6 +957,15 @@ function renderSkills(){
     g.chars.forEach(c => { html += skillCardHTML(skillInfo(c,p), {hw:true, attr:`data-skill="${esc(c)}"`}); });
     html += `</div>`;
   });
+  // 합체 기술: 한 번이라도 끝낸 낱말 미션의 낱말과 지금 데미지
+  const words = [];
+  allMissions().forEach(m => { if (!state.done[m.id]) return; m.items.forEach(it => { if (isWordItem(m, it) && !words.includes(it)) words.push(it); }); });
+  html += `<div class="sec-title">🔗 합체 기술 <span class="chip" style="background:#0E9F8E">${words.length}</span></div>`;
+  html += words.length
+    ? `<div class="note" style="margin:-4px 4px 8px">낱말 미션을 하면 배틀에서 낱말 카드로 합체 공격해요. 글자 데미지를 더해서 2글자 ×1.25, 3글자 ×1.5, 4글자 ×1.75, 5글자 이상 ×2!</div>
+       <div class="sgrid words">${words.map(w => { const wp = wordPower(w, p), n = Array.from(w).length;
+         return `<div class="skill wordc"><div class="ch">${esc(w)}</div><div class="lv">${n > 1 ? `🔗 합체 ×${wp.combo}` : "📝 낱말"}</div><div class="dm">⚔️ ${wp.dmg}</div></div>`; }).join("")}</div>`
+    : `<div class="card note center">낱말 미션을 끝내면 여기에 합체 기술이 생겨요. 예: 나무 합체 공격!</div>`;
   if (records.length){
     html += `<div class="sec-title">🖼️ 최근 모은 글씨</div><div class="gallery">${records.slice(0,12).map(r=>`<div class="gitem"><img src="${r.img}" alt=""><b>${esc(r.label)}</b><span>${fmtDate(r.at)}</span></div>`).join("")}</div>`;
   }
@@ -720,10 +984,10 @@ function openSkill(c){
     const g = GRADE[s.lv];
     body = `<div style="width:130px;margin:0 auto">${skillCardHTML(s,{noxp:true})}</div>
       <h3 style="margin-top:12px">${esc(c)} 스킬 · ${g.i} ${g.n}</h3>
-      <p style="font-size:18px;margin:4px 0">지금까지 <b>${s.n}번</b> 썼어요 · 데미지 ⚔️ ${s.dmg}</p>
+      <p style="font-size:18px;margin:4px 0">경험치 <b>${fmtN(s.n)}</b> · 데미지 ⚔️ ${s.dmg}${isWeak(c) ? ` · <b style="color:#C62828">🎯 지금 상대의 약점!</b>` : ""}</p>
       ${s.next ? `<div class="bar"><i style="width:${Math.round(s.xp*100)}%"></i></div>
-        <p class="note">${s.left}번 더 쓰면 <b>Lv.${s.lv+1} ${GRADE[s.lv+1].n}</b>! 데미지가 ${s.dmg} → ${DMG[s.lv+1]}로 올라가요.</p>`
-        : `<p class="note">👑 최고 레벨이에요! 그래도 계속 쓰면 공룡을 공격할 수 있어요.</p>`}
+        <p class="note">경험치 ${fmtN(s.left)} 더 모으면 <b>Lv.${s.lv+1} ${GRADE[s.lv+1].n}</b>! 데미지가 ${s.dmg} → ${DMG[s.lv+1]}로 올라가요.</p>`
+        : `<p class="note">👑 최고 레벨이에요! 그래도 계속 쓰면 상대를 공격할 수 있어요.</p>`}
       ${hw.length ? `<div class="note" style="margin:12px 0 6px">내가 쓴 ${esc(c)} (오래된 것 → 최근)</div>
         <div class="row" style="justify-content:center;gap:6px">${hw.slice(0,8).reverse().map(r=>`<div style="text-align:center"><img src="${r.img}" style="width:64px;height:64px;border-radius:10px;object-fit:cover;display:block"><span class="note" style="font-size:11px">${fmtDate(r.at)}</span></div>`).join("")}</div>` : ""}`;
   }
@@ -738,132 +1002,501 @@ function openSkill(c){
   });
 }
 
-/* ================= 학습지 ================= */
-const SHEET_W = 2480, SHEET_H = 3508;
-function copiesFor(L, review){
-  if (L === 1) return review ? ["dark","trace","blank","blank","blank","blank"] : ["dark","trace","trace","trace","blank","blank"];
-  if (L === 2) return review ? ["dark","blank","blank","blank","blank","blank"] : ["dark","trace","trace","blank","blank","blank"];
-  if (L === 3) return ["dark","trace","blank","blank"];
-  return ["dark","trace","blank"];
+/* ================= 획순 =================
+   획 데이터는 STROKES 한 곳에 모아 둔다. 직접 만든 데이터라 저작권 걱정이 없다.
+   - 좌표는 100x100 칸 기준. 획 하나가 SVG 경로 하나(펜이 지나가는 가운데 선)이고, 배열 순서가 획순이다.
+   - 획순은 초등학교 1학년 교과서 기준(위에서 아래, 왼쪽에서 오른쪽, ㅇ은 위에서 시작해 시계 반대 방향).
+   - 틀린 글자는 이 표에서 그 글자만 고치면 된다. 된소리(ㄲ 등), 겹받침(ㄳ 등), 겹모음(ㅘ 등), 글자(가, 곽 등)는
+     아래 기본 낱자를 조합해서 자동으로 만든다. */
+const STROKES = {
+  // 숫자 0~9 (4와 5는 2획, 나머지는 1획)
+  "0": ["M50 10 C30 10 24 34 24 50 C24 66 30 90 50 90 C70 90 76 66 76 50 C76 34 70 10 50 10"],
+  "1": ["M50 10 V90"],
+  "2": ["M27 30 C27 17 38 10 50 10 C63 10 73 18 73 30 C73 46 52 62 26 90 H78"],
+  "3": ["M28 22 C33 14 41 10 50 10 C63 10 71 18 71 29 C71 41 61 48 47 48 C63 48 75 56 75 69 C75 83 63 90 50 90 C40 90 31 86 26 78"],
+  "4": ["M58 10 L22 66 H82", "M62 32 V92"],
+  "5": ["M33 12 L29 47 C37 41 45 38 53 38 C67 38 76 49 76 63 C76 80 64 90 50 90 C40 90 31 86 26 78", "M33 12 H74"],
+  "6": ["M67 12 C49 22 26 42 26 66 C26 82 37 90 50 90 C64 90 74 80 74 66 C74 52 64 44 51 44 C39 44 30 52 26 62"],
+  "7": ["M24 12 H76 L42 90"],
+  "8": ["M70 24 C66 15 58 10 50 10 C38 10 30 18 30 28 C30 40 43 45 50 50 C58 55 74 61 74 72 C74 84 62 90 50 90 C38 90 26 84 26 72 C26 61 42 55 50 50 C58 45 70 38 70 28"],
+  "9": ["M72 30 C72 18 62 10 50 10 C37 10 28 19 28 30 C28 42 37 50 50 50 C62 50 72 42 72 30 V90"],
+  // 자음 14개
+  "ㄱ": ["M14 16 H82 L74 90"],
+  "ㄴ": ["M20 12 V82 H90"],
+  "ㄷ": ["M18 16 H84", "M18 16 V84 H88"],
+  "ㄹ": ["M16 12 H82 V46", "M18 46 H82", "M18 46 V86 H88"],
+  "ㅁ": ["M18 14 V86", "M18 14 H82 V86", "M18 86 H82"],
+  "ㅂ": ["M20 10 V88", "M80 10 V88", "M20 48 H80", "M20 88 H80"],
+  "ㅅ": ["M52 10 L14 90", "M33 50 L88 90"],
+  "ㅇ": ["M50 12 A38 38 0 0 0 50 88 A38 38 0 0 0 50 12"],
+  "ㅈ": ["M16 16 H78 L16 90", "M47 52 L88 90"],
+  "ㅊ": ["M50 3 V15", "M16 24 H78 L16 92", "M47 58 L88 92"],
+  "ㅋ": ["M14 16 H82 L74 90", "M18 52 H78"],
+  "ㅌ": ["M20 14 H84", "M20 48 H80", "M20 14 V86 H88"],
+  "ㅍ": ["M12 16 H88", "M34 16 L38 82", "M66 16 L62 82", "M8 84 H92"],
+  "ㅎ": ["M50 3 V15", "M14 25 H86", "M50 40 A24 24 0 0 0 50 88 A24 24 0 0 0 50 40"],
+  // 모음 (기본 10개와 ㅐ ㅒ ㅔ ㅖ). 세로 모음은 칸 높이를, 가로 모음은 칸 너비를 꽉 채운다
+  "ㅏ": ["M38 4 V96", "M38 48 H80"],
+  "ㅑ": ["M36 4 V96", "M36 34 H78", "M36 64 H78"],
+  "ㅓ": ["M18 48 H62", "M62 4 V96"],
+  "ㅕ": ["M18 34 H62", "M18 64 H62", "M62 4 V96"],
+  "ㅗ": ["M50 24 V60", "M4 60 H96"],
+  "ㅛ": ["M34 24 V60", "M66 24 V60", "M4 60 H96"],
+  "ㅜ": ["M4 24 H96", "M50 24 V84"],
+  "ㅠ": ["M4 24 H96", "M34 24 V84", "M66 24 V84"],
+  "ㅡ": ["M4 50 H96"],
+  "ㅣ": ["M50 4 V96"],
+  "ㅐ": ["M28 10 V88", "M28 48 H62", "M66 4 V96"],
+  "ㅒ": ["M28 10 V88", "M28 34 H62", "M28 64 H62", "M66 4 V96"],
+  "ㅔ": ["M12 48 H40", "M40 10 V88", "M70 4 V96"],
+  "ㅖ": ["M10 34 H40", "M10 64 H40", "M40 10 V88", "M70 4 V96"]
+};
+/* 오른쪽에 세로 모음이 붙는 첫소리(가, 각, 카)에서는 ㄱ ㅋ의 다리가 왼쪽 아래로 크게 휜다 */
+const STROKES_SWEEP = {
+  "ㄱ": ["M12 14 H78 C78 46 60 74 14 92"],
+  "ㅋ": ["M12 14 H78 C78 46 60 74 14 92", "M14 50 H66"]
+};
+const STROKE_DOUBLE = {"ㄲ":"ㄱ", "ㄸ":"ㄷ", "ㅃ":"ㅂ", "ㅆ":"ㅅ", "ㅉ":"ㅈ"};
+const STROKE_PAIR = {"ㄳ":"ㄱㅅ", "ㄵ":"ㄴㅈ", "ㄶ":"ㄴㅎ", "ㄺ":"ㄹㄱ", "ㄻ":"ㄹㅁ", "ㄼ":"ㄹㅂ", "ㄽ":"ㄹㅅ", "ㄾ":"ㄹㅌ", "ㄿ":"ㄹㅍ", "ㅀ":"ㄹㅎ", "ㅄ":"ㅂㅅ"};
+const STROKE_VMIX = {"ㅘ":"ㅗㅏ", "ㅙ":"ㅗㅐ", "ㅚ":"ㅗㅣ", "ㅝ":"ㅜㅓ", "ㅞ":"ㅜㅔ", "ㅟ":"ㅜㅣ", "ㅢ":"ㅡㅣ"};
+const H_CHO = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ";
+const H_JUNG = "ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ";
+const H_JONG = ["", ..."ㄱㄲㄳㄴㄵㄶㄷㄹㄺㄻㄼㄽㄾㄿㅀㅁㅂㅄㅅㅆㅇㅈㅊㅋㅌㅍㅎ"];
+/* 글자 배치: 세로 모음(가), 가로 모음(고), 섞인 모음(과)과 받침이 있을 때(각, 곡, 곽). [x, y, 너비, 높이] */
+/* cho2: 첫소리가 된소리(ㄲ ㄸ ㅃ ㅆ ㅉ)일 때. 글꼴처럼 첫소리를 더 넓게 쓴다 */
+const H_LAYOUT = {
+  v:  {cho:[6,14,48,72],  cho2:[2,14,56,72], jung:[50,4,44,92], jung2:[54,4,40,92]},
+  h:  {cho:[20,4,60,50],  cho2:[12,4,76,50], jung:[4,48,92,46]},
+  m:  {cho:[8,6,48,44],   cho2:[4,6,56,44],  jh:[4,42,70,42],  jv:[60,2,36,96]},
+  vf: {cho:[8,6,44,46],   cho2:[4,6,52,46],  jung:[48,2,42,62], jung2:[52,2,40,62], jong:[16,62,68,34]},
+  hf: {cho:[22,2,56,32],  cho2:[14,2,72,32], jung:[6,30,88,32], jong:[18,64,64,32]},
+  mf: {cho:[10,2,44,32],  cho2:[6,2,52,32],  jh:[4,28,64,32],  jv:[58,2,34,62], jong:[16,64,62,32]}
+};
+/* 경로를 상자 안으로 옮기고 늘이기 (M L H V C Q A 절대 좌표만 쓴다) */
+function strokeFit(d, box){
+  const [bx, by, bw, bh] = box, sx = bw / 100, sy = bh / 100;
+  const X = v => +(bx + v * sx).toFixed(2), Y = v => +(by + v * sy).toFixed(2);
+  const t = d.match(/[MLHVCQA]|-?\d*\.?\d+/g), out = [];
+  let i = 0, cmd = "";
+  const num = () => Number(t[i++]);
+  while (i < t.length){
+    if (/[A-Z]/.test(t[i])){ cmd = t[i++]; out.push(cmd); }
+    if (cmd === "M" || cmd === "L") out.push(X(num()), Y(num()));
+    else if (cmd === "H") out.push(X(num()));
+    else if (cmd === "V") out.push(Y(num()));
+    else if (cmd === "C") for (let k = 0; k < 3; k++) out.push(X(num()), Y(num()));
+    else if (cmd === "Q") for (let k = 0; k < 2; k++) out.push(X(num()), Y(num()));
+    else if (cmd === "A"){ const rx = num(), ry = num(), rot = num(), la = num(), sw = num(); out.push(+(rx*sx).toFixed(2), +(ry*sy).toFixed(2), rot, la, sw, X(num()), Y(num())); }
+    else i++;
+  }
+  return out.join(" ");
 }
-async function drawSheet(m){
-  const allText = m.items.join("") + "글씨미션이름날짜월일다쓰면사진을찍어서올려요어른확인스킬";
-  try{
-    await Promise.all([
-      document.fonts.load('500 200px "Noto Sans KR"', allText),
-      document.fonts.load('400 100px "Jua"', m.title + allText)
-    ]);
-  }catch(_){}
-  const cv = document.createElement("canvas"); cv.width = SHEET_W; cv.height = SHEET_H;
-  const x = cv.getContext("2d");
-  x.fillStyle = "#fff"; x.fillRect(0,0,SHEET_W,SHEET_H);
-  const M = 170;
-  x.fillStyle = "#FFF1DC"; roundRect(x, M-40, 110, SHEET_W-2*(M-40), 270, 50); x.fill();
-  x.fillStyle = "#3B2F2A"; x.font = '400 120px "Jua", sans-serif'; x.textBaseline = "alphabetic";
-  x.fillText("글씨 미션", M, 250);
-  x.fillStyle = "#FF9F43"; x.font = '400 92px "Jua", sans-serif';
-  x.fillText(m.title, M + 620, 250);
-  x.fillStyle = "#8A7B72"; x.font = '500 58px "Noto Sans KR", sans-serif';
-  x.fillText("이름: " + (state.name || "____________") + "        날짜: ____ 월 ____ 일", M, 345);
-
-  const rows = [];
-  m.items.forEach((it, idx) => {
-    const ch = Array.from(it), L = ch.length;
-    const perRow = Math.max(1, Math.floor(6 / L));
-    const copies = copiesFor(L, m.review);
-    for (let i = 0; i < copies.length; i += perRow){
-      rows.push({chars:ch, styles:copies.slice(i, i+perRow), first: i===0});
+/* 글자 하나의 획 목록(100x100 칸). 그릴 수 없는 글자는 null */
+function glyphStrokes(ch){
+  if (STROKES[ch]) return STROKES[ch];
+  // 된소리와 겹받침: 두 낱자를 나란히 (글꼴처럼 가운데를 조금 벌린다)
+  if (STROKE_DOUBLE[ch]){ const b = STROKES[STROKE_DOUBLE[ch]]; return [...b.map(d => strokeFit(d, [0,6,49,88])), ...b.map(d => strokeFit(d, [51,6,49,88]))]; }
+  if (STROKE_PAIR[ch]){ const [a, b] = Array.from(STROKE_PAIR[ch]); return [...glyphStrokes(a).map(d => strokeFit(d, [0,6,49,88])), ...glyphStrokes(b).map(d => strokeFit(d, [51,6,49,88]))]; }
+  if (STROKE_VMIX[ch]){ const [h, v] = Array.from(STROKE_VMIX[ch]); return [...STROKES[h].map(d => strokeFit(d, [2,10,68,80])), ...STROKES[v].map(d => strokeFit(d, [56,2,40,96]))]; }
+  const code = ch.charCodeAt(0) - 0xAC00;
+  if (ch.length === 1 && code >= 0 && code < 11172){
+    const cho = H_CHO[Math.floor(code / 588)], jung = H_JUNG[Math.floor((code % 588) / 28)], jong = H_JONG[code % 28];
+    const kind = STROKE_VMIX[jung] ? "m" : "ㅗㅛㅜㅠㅡ".includes(jung) ? "h" : "v";
+    const L = H_LAYOUT[kind + (jong ? "f" : "")];
+    const dbl = !!STROKE_DOUBLE[cho];
+    const choSt = kind === "v" && STROKES_SWEEP[cho] ? STROKES_SWEEP[cho] : glyphStrokes(cho);
+    const out = choSt.map(d => strokeFit(d, dbl ? L.cho2 : L.cho));
+    if (kind === "m"){ const [h, v] = Array.from(STROKE_VMIX[jung]); out.push(...STROKES[h].map(d => strokeFit(d, L.jh)), ...STROKES[v].map(d => strokeFit(d, L.jv))); }
+    else out.push(...STROKES[jung].map(d => strokeFit(d, dbl && L.jung2 ? L.jung2 : L.jung)));
+    if (jong) out.push(...glyphStrokes(jong).map(d => strokeFit(d, L.jong)));
+    return out;
+  }
+  return null;
+}
+/* ================= 붓으로 칠하는 획순 =================
+   1) 글자를 실제 글꼴(Noto Sans KR)로 그려서 글꼴 모양을 얻는다.
+   2) STROKES의 획 가운데 선을 글꼴 크기에 맞춰 옮긴다.
+   3) 글꼴 모양 안의 점마다 "가장 가까운 획"과 "그 획의 몇 % 위치인지"를 미리 계산해 둔다.
+   4) 애니메이션은 획 순서와 진행도에 맞춰 그 점들을 칠한다. 그래서 결과는 글꼴과 똑같은 모양이 되고,
+      글꼴 밖으로는 칠이 나가지 않으며, 만나는 곳은 가까운 획에 붙어서 다음 획이 미리 칠해지지 않는다. */
+const BRUSH = {res: 360, cur: "#E8590C", done: "#4A4440", todo: "#E6E0D8", font: '"HakgyoB"'};   // 바탕 글꼴: 학교안심 받아쓰기 B
+/* 글꼴을 다 불러온 뒤에 계산해야 모양이 맞는다 */
+/* fonts.css가 예전 것으로 남아 있어도 되도록, 글꼴이 등록돼 있지 않으면 여기서 직접 등록한다 */
+function brushFontReady(text){
+  if (!document.fonts || !document.fonts.load) return Promise.resolve();
+  const has = Array.from(document.fonts).some(f => f.family.replace(/["']/g, "") === "HakgyoB");
+  if (!has && window.FontFace){
+    try{ document.fonts.add(new FontFace("HakgyoB", "url(fonts/hakgyoansim-badasseugi-b.otf)", {weight: "400"})); }catch(_){}
+  }
+  return document.fonts.load(`400 100px ${BRUSH.font}`, text || "가").catch(() => {});
+}
+const brushCache = {};
+const hexRGB = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+let brushMeasureSvg = null;
+function brushSample(d, step){
+  if (!brushMeasureSvg){
+    brushMeasureSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    brushMeasureSvg.setAttribute("width", "0"); brushMeasureSvg.setAttribute("height", "0");
+    brushMeasureSvg.style.cssText = "position:absolute;left:-9999px;top:0";
+    document.body.appendChild(brushMeasureSvg);
+  }
+  const p = document.createElementNS("http://www.w3.org/2000/svg", "path"); p.setAttribute("d", d); brushMeasureSvg.appendChild(p);
+  const L = p.getTotalLength(), n = Math.max(2, Math.ceil(L / step)), pts = [];
+  for (let i = 0; i <= n; i++){ const q = p.getPointAtLength(L * i / n); pts.push({x: q.x, y: q.y, t: i / n}); }
+  p.remove();
+  return {L, pts};
+}
+function brushData(ch){
+  if (brushCache[ch]) return brushCache[ch];
+  const R = BRUSH.res, strokes = glyphStrokes(ch) || [];
+  // 1) 글꼴 모양
+  const cv = document.createElement("canvas"); cv.width = cv.height = R;
+  const x = cv.getContext("2d", {willReadFrequently: true});
+  // 글자 크기를 재서 칸의 78%쯤을 채우게 한다 (이 글꼴은 낱자 ㄱ, ㅏ 등을 작게 그려 두었다)
+  x.textAlign = "center"; x.textBaseline = "alphabetic";
+  x.font = `400 ${Math.round(R * 0.8)}px ${BRUSH.font}`;
+  const m0 = x.measureText(ch);
+  const big = Math.max(m0.actualBoundingBoxLeft + m0.actualBoundingBoxRight, m0.actualBoundingBoxAscent + m0.actualBoundingBoxDescent) || R * 0.8;
+  const fs = Math.round(R * 0.8 * Math.min(1.9, Math.max(0.8, R * 0.78 / big)));
+  x.font = `400 ${fs}px ${BRUSH.font}`;
+  const m = x.measureText(ch), asc = m.actualBoundingBoxAscent, des = m.actualBoundingBoxDescent;
+  x.fillStyle = "#000"; x.fillText(ch, R / 2 + (m.actualBoundingBoxLeft - m.actualBoundingBoxRight) / 2, R / 2 + (asc - des) / 2);   // 잉크 기준으로 가운데
+  const img = x.getImageData(0, 0, R, R).data, alpha = new Uint8Array(R * R), ink = [];
+  let minX = R, minY = R, maxX = 0, maxY = 0;
+  for (let i = 0; i < R * R; i++){
+    const a = img[i * 4 + 3]; alpha[i] = a;
+    if (a >= 8) ink.push(i);
+    if (a > 110){ const px = i % R, py = (i / R) | 0; if (px < minX) minX = px; if (px > maxX) maxX = px; if (py < minY) minY = py; if (py > maxY) maxY = py; }
+  }
+  // 2) 글꼴 안쪽 깊이(테두리까지 거리). 깊이가 가장 깊은 곳이 글꼴 획의 한가운데다
+  const dt = new Float32Array(R * R), BIG = 1e6;
+  for (let i = 0; i < R * R; i++) dt[i] = alpha[i] > 110 ? BIG : 0;
+  for (let y = 0; y < R; y++) for (let xx = 0; xx < R; xx++){
+    const i = y * R + xx; if (!dt[i]) continue;
+    let v = dt[i];
+    if (xx > 0) v = Math.min(v, dt[i - 1] + 1);
+    if (y > 0){ v = Math.min(v, dt[i - R] + 1); if (xx > 0) v = Math.min(v, dt[i - R - 1] + 1.414); if (xx < R - 1) v = Math.min(v, dt[i - R + 1] + 1.414); }
+    dt[i] = v;
+  }
+  for (let y = R - 1; y >= 0; y--) for (let xx = R - 1; xx >= 0; xx--){
+    const i = y * R + xx; if (!dt[i]) continue;
+    let v = dt[i];
+    if (xx < R - 1) v = Math.min(v, dt[i + 1] + 1);
+    if (y < R - 1){ v = Math.min(v, dt[i + R] + 1); if (xx < R - 1) v = Math.min(v, dt[i + R + 1] + 1.414); if (xx > 0) v = Math.min(v, dt[i + R - 1] + 1.414); }
+    dt[i] = v;
+  }
+  const depth = (px, py) => { const X = Math.round(px), Y = Math.round(py); return X < 0 || Y < 0 || X >= R || Y >= R ? 0 : dt[Y * R + X]; };
+  // 글꼴 획 굵기의 절반: 글꼴 안쪽 깊이 중 깊은 쪽(상위 10%) 값
+  const deep = []; for (let k = 0; k < ink.length; k += 7){ const v = dt[ink[k]]; if (v > 0) deep.push(v); }
+  deep.sort((a, b) => a - b);
+  const half = deep.length ? deep[Math.floor(deep.length * 0.9)] : fs * 0.04;
+  // 3) 획 가운데 선을 글꼴 범위에 맞춘다 (글꼴 범위에서 획 굵기 절반만큼 안쪽)
+  const samples = strokes.map(d => brushSample(d, 0.6));
+  let sx0 = 1e9, sy0 = 1e9, sx1 = -1e9, sy1 = -1e9;
+  samples.forEach(s => s.pts.forEach(p => { sx0 = Math.min(sx0, p.x); sx1 = Math.max(sx1, p.x); sy0 = Math.min(sy0, p.y); sy1 = Math.max(sy1, p.y); }));
+  const ix0 = minX + half, ix1 = maxX - half, iy0 = minY + half, iy1 = maxY - half;
+  let kx = (sx1 - sx0) > 12 ? (ix1 - ix0) / (sx1 - sx0) : null, ky = (sy1 - sy0) > 12 ? (iy1 - iy0) / (sy1 - sy0) : null;
+  if (kx == null) kx = ky; if (ky == null) ky = kx;
+  const map = p => ({x: (ix0 + ix1) / 2 + (p.x - (sx0 + sx1) / 2) * kx, y: (iy0 + iy1) / 2 + (p.y - (sy0 + sy1) / 2) * ky});
+  const paths = samples.map(s => ({L: s.L, pts: s.pts.map(p => Object.assign(map(p), {t: p.t}))}));
+  // 4) 획 선을 글꼴 획의 한가운데로 끌어다 맞춘다
+  const SC = [0.7, 0.8, 0.9, 1, 1.1];
+  paths.forEach(s => {
+    // (가) 획을 통째로 옮기고 크기도 조금 바꿔 보며 글꼴 획과 가장 잘 겹치는 자리 찾기.
+    //      옆 획으로 넘어가지 않도록 가까운 범위(±24)만 보고, 멀리 갈수록, 크기를 많이 바꿀수록 점수를 깎는다
+    let cx = 0, cy = 0; s.pts.forEach(p => { cx += p.x; cy += p.y; }); cx /= s.pts.length; cy /= s.pts.length;
+    const m = Math.ceil(s.pts.length / 40), use = s.pts.filter((p, j) => j % m === 0), cnt = use.length;
+    let best = {sc: -1e9, ox: 0, oy: 0, kx: 1, ky: 1};
+    const search = (range, step) => {
+      for (const ax of SC) for (const ay of SC) for (let oy = -range; oy <= range; oy += step) for (let ox = -range; ox <= range; ox += step){
+        let sc = 0;
+        for (const p of use){ const d = depth(cx + (p.x - cx) * ax + ox, cy + (p.y - cy) * ay + oy); sc += d > 0 ? Math.min(d, half + 2) : -half; }
+        sc -= cnt * (0.0025 * (ox * ox + oy * oy) + 3 * (Math.abs(1 - ax) + Math.abs(1 - ay)));
+        if (sc > best.sc) best = {sc, ox, oy, kx: ax, ky: ay};
+      }
+    };
+    const inside = () => use.filter(p => depth(cx + (p.x - cx) * best.kx + best.ox, cy + (p.y - cy) * best.ky + best.oy) > 0).length / cnt;
+    search(24, 3);
+    if (inside() < 0.6) search(48, 4);   // 잘 안 겹치면 더 넓게 찾아본다
+    s.pts.forEach(p => { p.x = cx + (p.x - cx) * best.kx + best.ox; p.y = cy + (p.y - cy) * best.ky + best.oy; });
+    // (나) 점마다 진행 방향의 옆으로 움직여 획 한가운데(가장 깊은 곳)에 놓기
+    const n = s.pts.length, off = new Float32Array(n * 2);
+    for (let j = 0; j < n; j++){
+      const a = s.pts[Math.max(0, j - 2)], b = s.pts[Math.min(n - 1, j + 2)];
+      let tx = b.x - a.x, ty = b.y - a.y; const l = Math.hypot(tx, ty) || 1; tx /= l; ty /= l;
+      const nx = -ty, ny = tx; let bs = 0, bv = depth(s.pts[j].x, s.pts[j].y) - 0;
+      for (let k = -10; k <= 10; k++){ const v = depth(s.pts[j].x + nx * k, s.pts[j].y + ny * k) - 0.25 * Math.abs(k); if (v > bv){ bv = v; bs = k; } }
+      off[j * 2] = nx * bs; off[j * 2 + 1] = ny * bs;
     }
-  });
-  if (rows.length <= 4){
-    m.items.forEach(it => {
-      const L = Array.from(it).length, perRow = Math.max(1, Math.floor(6 / L));
-      rows.push({chars:Array.from(it), styles:Array(perRow).fill("blank"), first:true});
+    // 들쭉날쭉하지 않게 이웃 점과 평균
+    const W = 5;
+    s.pts.forEach((p, j) => {
+      let ax = 0, ay = 0, c = 0;
+      for (let k = Math.max(0, j - W); k <= Math.min(n - 1, j + W); k++){ ax += off[k * 2]; ay += off[k * 2 + 1]; c++; }
+      p.x += ax / c; p.y += ay / c;
     });
-  }
-  const maxCells = Math.max(6, ...m.items.map(s => Array.from(s).length));
-  const top = 460, bottom = SHEET_H - 260, itemGap = 56, rowGap = 22;
-  const firsts = rows.filter(r => r.first).length;
-  const gaps = (firsts-1)*itemGap + (rows.length-firsts)*rowGap;
-  const cell = Math.min(356, Math.floor((SHEET_W - 2*M) / maxCells), Math.floor((bottom - top - gaps) / rows.length));
-  let y = top;
-  rows.forEach((r, ri) => {
-    if (ri > 0) y += r.first ? itemGap : rowGap;
-    let cx = M;
-    r.styles.forEach(s => { r.chars.forEach(c => { drawCell(x, cx, y, cell, c, s); cx += cell; }); });
-    y += cell;
   });
-  x.fillStyle = "#8A7B72"; x.font = '400 70px "Jua", sans-serif';
-  x.fillText("다 쓰면 사진을 찍어서 올려요!", M, SHEET_H - 140);
-  x.textAlign = "right"; x.fillText("어른 확인  ☆ ☆ ☆", SHEET_W - M, SHEET_H - 140); x.textAlign = "left";
-  return cv;
+  // 4-2) 획 선의 양 끝을 글꼴 획 끝(명조체의 돌기 포함)까지 늘린다. 다른 획에 가까워지면 멈춘다
+  const nearOther = (si, x0, y0) => paths.some((o, oi) => oi !== si && o.pts.some(q => (q.x - x0) * (q.x - x0) + (q.y - y0) * (q.y - y0) < (half * 1.6) * (half * 1.6)));
+  paths.forEach((s, si) => {
+    const grow = (atEnd) => {
+      const P = s.pts, n = P.length, a = atEnd ? P[n - 1] : P[0], b = atEnd ? P[Math.max(0, n - 6)] : P[Math.min(n - 1, 5)];
+      let ux = a.x - b.x, uy = a.y - b.y; const l = Math.hypot(ux, uy) || 1; ux /= l; uy /= l;
+      const add = [];
+      for (let k = 1; k <= 40; k++){
+        const x0 = a.x + ux * k, y0 = a.y + uy * k;
+        if (depth(x0, y0) <= 0.5 || nearOther(si, x0, y0)) break;
+        add.push({x: x0, y: y0, t: atEnd ? 1 : 0});
+      }
+      if (atEnd) P.push(...add); else P.unshift(...add.reverse());
+    };
+    grow(false); grow(true);
+  });
+  // 5) 글꼴 안의 점마다 어느 획이 칠할지 정한다.
+  //    거리는 "글꼴 안쪽으로만 이어서" 잰다. 그래서 흰 틈 건너편의 획(예: 장의 ㅈ과 ㅏ 꼭대기 돌기)에는 붙지 않는다.
+  //    먼저 쓴 획의 몸통 안(가운데 선에서 획 굵기 절반 남짓)에 드는 점은 먼저 쓴 획이 칠한다.
+  //    그래서 획이 만나는 곳이 먼저 쓴 획에 홈처럼 비어 보이지 않는다. 어느 몸통에도 안 들면 가장 가까운 획.
+  const bodyR = paths.map(s => {
+    const ds = s.pts.map(p => depth(p.x, p.y)).filter(v => v > 0).sort((a, b) => a - b);
+    return (ds.length ? ds[Math.floor(ds.length * 0.75)] : fs * 0.045) + 3.5;
+  });
+  const NS = paths.length, inMask = new Uint8Array(R * R);
+  ink.forEach(i => { inMask[i] = 1; });
+  const gd = [], gt = [], QN = R * R * 6, queue = new Int32Array(QN);
+  paths.forEach(s => {
+    const d = new Float32Array(R * R).fill(1e9), t = new Float32Array(R * R);
+    let qh = 0, qt = 0;
+    s.pts.forEach(p => {
+      const X = Math.round(p.x), Y = Math.round(p.y); if (X < 0 || Y < 0 || X >= R || Y >= R) return;
+      const i = Y * R + X; if (!inMask[i] || d[i] === 0) return;
+      d[i] = 0; t[i] = p.t; queue[qt++] = i;
+    });
+    // 글꼴 안에서만 넓혀 가며 거리 재기 (가로세로 1, 대각선 1.41)
+    while (qh < qt){
+      const i = queue[qh++], x0 = i % R, y0 = (i / R) | 0, di = d[i];
+      if (di > 90) continue;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++){
+        if (!dx && !dy) continue;
+        const X = x0 + dx, Y = y0 + dy; if (X < 0 || Y < 0 || X >= R || Y >= R) continue;
+        const j = Y * R + X; if (!inMask[j]) continue;
+        const nd = di + (dx && dy ? 1.414 : 1);
+        if (nd < d[j] - 0.01 && qt < QN){ d[j] = nd; t[j] = t[i]; queue[qt++] = j; }
+      }
+    }
+    gd.push(d); gt.push(t);
+  });
+  const owner = new Int8Array(R * R).fill(-1), tt = new Float32Array(R * R);
+  ink.forEach(i => {
+    let pick = -1;
+    for (let s = 0; s < NS; s++) if (gd[s][i] <= bodyR[s]){ pick = s; break; }   // 먼저 쓴 획의 몸통 안
+    if (pick < 0){ let b = 1e8; for (let s = 0; s < NS; s++) if (gd[s][i] < b){ b = gd[s][i]; pick = s; } }  // 아니면 가장 가까운 획
+    if (pick >= 0 && gd[pick][i] < 1e8){ owner[i] = pick; tt[i] = gt[pick][i]; }
+  });
+  // 4) 획 번호 자리: 시작점 옆, 글꼴 모양 밖. 획이 나아가는 반대쪽부터 찾는다
+  const free = (cx, cy, r) => {
+    if (cx < r + 2 || cy < r + 2 || cx > R - r - 2 || cy > R - r - 2) return false;
+    for (let yy = -r; yy <= r; yy += 2) for (let xx = -r; xx <= r; xx += 2){
+      if (xx * xx + yy * yy > r * r) continue;
+      if (alpha[((cy + yy) | 0) * R + ((cx + xx) | 0)] > 20) return false;
+    }
+    return true;
+  };
+  const labels = [];
+  paths.forEach(s => {
+    const a = s.pts[0], b = s.pts[Math.min(s.pts.length - 1, 6)];
+    const dx = a.x - b.x, dy = a.y - b.y, n = Math.hypot(dx, dy) || 1, ux = dx / n, uy = dy / n;
+    const dirs = [[ux, uy], [ux - uy, uy + ux], [ux + uy, uy - ux], [-uy, ux], [uy, -ux], [-ux, -uy]].map(([p, q]) => { const l = Math.hypot(p, q) || 1; return [p / l, q / l]; });
+    let spot = null;
+    for (let dist = 22; dist <= 70 && !spot; dist += 6){
+      for (const [p, q] of dirs){
+        const cx = a.x + p * dist, cy = a.y + q * dist;
+        if (free(cx, cy, 13) && !labels.some(l => Math.hypot(l.x - cx, l.y - cy) < 26)){ spot = {x: cx, y: cy}; break; }
+      }
+    }
+    labels.push(spot || {x: Math.min(R - 14, Math.max(14, a.x + ux * 24)), y: Math.min(R - 14, Math.max(14, a.y + uy * 24))});
+  });
+  const inkIdx = Int32Array.from(ink);
+  return (brushCache[ch] = {R, alpha, owner, tt, inkIdx, paths, labels, n: paths.length});
 }
-function roundRect(x, X, Y, W, H, r){
-  x.beginPath(); x.moveTo(X+r,Y); x.arcTo(X+W,Y,X+W,Y+H,r); x.arcTo(X+W,Y+H,X,Y+H,r); x.arcTo(X,Y+H,X,Y,r); x.arcTo(X,Y,X+W,Y,r); x.closePath();
-}
-function drawCell(x, X, Y, s, ch, style){
-  x.save();
-  x.strokeStyle = "#D6D6D6"; x.lineWidth = 3; x.setLineDash([16,14]);
-  x.beginPath(); x.moveTo(X+s/2, Y+8); x.lineTo(X+s/2, Y+s-8); x.moveTo(X+8, Y+s/2); x.lineTo(X+s-8, Y+s/2); x.stroke();
-  x.setLineDash([]); x.strokeStyle = "#9A9A9A"; x.lineWidth = 5; x.strokeRect(X, Y, s, s);
-  if (style !== "blank"){
-    x.font = `500 ${Math.round(s*0.74)}px "Noto Sans KR", sans-serif`;
-    x.textAlign = "center"; x.textBaseline = "alphabetic";
-    const mt = x.measureText(ch);
-    const asc = mt.actualBoundingBoxAscent || s*0.55, desc = mt.actualBoundingBoxDescent || 0;
-    x.fillStyle = style === "dark" ? "#2B2B2B" : "#D2D2D2";
-    x.fillText(ch, X + s/2, Y + s/2 + (asc - desc)/2);
+function brushRender(cell, cur, prog){
+  const D = cell._bd, ctx = cell._ctx, R = D.R;
+  if (!cell._img) cell._img = ctx.createImageData(R, R);
+  const out = cell._img.data, C = hexRGB(BRUSH.cur), Dn = hexRGB(BRUSH.done), T = hexRGB(BRUSH.todo);
+  for (let k = 0; k < D.inkIdx.length; k++){
+    const i = D.inkIdx[k], o = D.owner[i];
+    const col = (o >= 0 && o < cur) || (o < 0 && cur >= D.n) ? Dn : (o === cur && D.tt[i] <= prog) ? C : T;
+    const j = i * 4; out[j] = col[0]; out[j + 1] = col[1]; out[j + 2] = col[2]; out[j + 3] = D.alpha[i];
   }
-  x.restore();
+  ctx.putImageData(cell._img, 0, 0);
+  // 덧그림: 지금 획의 시작점 점, 작은 방향 화살표, 획 번호, 연필
+  const ov = cell._ov, ls = cell._ls || 1; let h = "";   // ls: 작은 칸에서 번호를 크게 그릴 배율
+  for (let s = 0; s < D.n && s <= cur; s++){
+    const L = D.labels[s], on = s === cur;
+    h += `<g><circle cx="${L.x}" cy="${L.y}" r="${11 * ls}" fill="${on ? BRUSH.cur : "#fff"}" stroke="${on ? BRUSH.cur : "#B8AEA4"}" stroke-width="${2 * ls}"/>
+      <text x="${L.x}" y="${L.y + 5.2 * ls}" text-anchor="middle" class="bnum" style="font-size:${15 * ls}px" fill="${on ? "#fff" : "#8A7B72"}">${s + 1}</text></g>`;
+  }
+  const pen = cell._pen;
+  if (cur >= 0 && cur < D.n){
+    const P = D.paths[cur].pts, a = P[0], b = P[Math.min(P.length - 1, 8)];
+    const ang = Math.atan2(b.y - a.y, b.x - a.x);
+    h += `<circle cx="${a.x}" cy="${a.y}" r="7" fill="${BRUSH.cur}" stroke="#fff" stroke-width="2.5"/>`;
+    // 시작점 바로 옆(획 바깥쪽)에 작은 방향 화살표
+    const ox = -Math.sin(ang) * 20, oy = Math.cos(ang) * 20, cx = a.x + ox + Math.cos(ang) * 10, cy = a.y + oy + Math.sin(ang) * 10;
+    const tip = (r, t) => `${(cx + Math.cos(ang + t) * r).toFixed(1)},${(cy + Math.sin(ang + t) * r).toFixed(1)}`;
+    h += `<line x1="${(cx - Math.cos(ang) * 14).toFixed(1)}" y1="${(cy - Math.sin(ang) * 14).toFixed(1)}" x2="${cx.toFixed(1)}" y2="${cy.toFixed(1)}" stroke="${BRUSH.cur}" stroke-width="3" stroke-linecap="round"/>
+      <polyline points="${tip(9, Math.PI - 0.55)} ${tip(0, 0)} ${tip(9, Math.PI + 0.55)}" fill="none" stroke="${BRUSH.cur}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`;
+    const q = P[Math.min(P.length - 1, Math.round(prog * (P.length - 1)))];
+    pen.style.left = (q.x / R * 100) + "%"; pen.style.top = (q.y / R * 100) + "%"; pen.style.opacity = prog > 0 && prog < 1 ? 1 : 0;
+  } else pen.style.opacity = 0;
+  ov.innerHTML = h;
+}
+/* 칸 하나 만들기. 돌려주는 값: el, total, play(slow), step(), stop(), showAll() */
+function brushCell(ch){
+  const el = document.createElement("div"); el.className = "bcell";
+  const st = glyphStrokes(ch);
+  el.innerHTML = `<svg class="guide" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M50 0 V100 M0 50 H100" stroke="#E6DDD2" stroke-width=".6" stroke-dasharray="2 2" fill="none"/></svg>
+    <canvas width="${BRUSH.res}" height="${BRUSH.res}"></canvas><svg class="ov" viewBox="0 0 ${BRUSH.res} ${BRUSH.res}"></svg><div class="pencil">✏️</div>`;
+  if (!st){
+    el.innerHTML += `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:400 180px HakgyoB,'Noto Sans KR';color:#CFC6BB">${esc(ch)}</div>`;
+    return {el, total: 0, play(){}, step(){ return Promise.resolve(0); }, stop(){}, showAll(){}};
+  }
+  el._bd = brushData(ch); el._ctx = el.querySelector("canvas").getContext("2d"); el._ov = el.querySelector("svg.ov"); el._pen = el.querySelector(".pencil");
+  const D = el._bd;
+  let token = 0, k = 0;
+  const run = (s, slow) => new Promise(res => {
+    const my = token, dur = Math.max(0.45, D.paths[s].L / 95) * (slow ? 2.4 : 1) * 1000, t0 = performance.now();
+    const f = now => {
+      if (my !== token) return res(false);
+      const p = Math.max(0, Math.min(1, (now - t0) / dur));   // 첫 프레임 시각이 t0보다 조금 이를 수 있다
+      brushRender(el, s, p);
+      if (p < 1) requestAnimationFrame(f); else res(true);
+    };
+    requestAnimationFrame(f);
+  });
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const api = {
+    el, total: D.n,
+    async play(slow){
+      const my = ++token; k = 0; brushRender(el, -1, 0);
+      await sleep(250);
+      for (let s = 0; s < D.n; s++){
+        if (my !== token) return;
+        if (!(await run(s, slow))) return;
+        k = s + 1;
+        await sleep(slow ? 450 : 220);
+      }
+      if (my === token) brushRender(el, D.n, 0);
+    },
+    async step(){
+      ++token; if (k >= D.n) k = 0;
+      const s = k; k++;
+      await run(s, false);
+      if (k >= D.n) brushRender(el, D.n, 0);
+      return k;
+    },
+    stop(){ ++token; },
+    showAll(){ ++token; k = D.n; brushRender(el, D.n, 0); }
+  };
+  brushRender(el, -1, 0);
+  return api;
 }
 
 /* ================= 미션 진행 ================= */
 function openMission(id){
   const m = missionById(id); if (!m) return;
-  cur = {m, step:1, sheet:null, img:null, crop:null, label: charsOf(m)[0] || ""};
+  cur = {m, step:1, li:0, img:null, crop:null, label: charsOf(m)[0] || ""};
   tab = "play"; render();
 }
+/* 연습장에 쓸 횟수 (어른 메뉴에서 바꿈): 글자 미션 기본 5번(예전에 바꿔 둔 reps가 있으면 그 값), 낱말 미션 기본 3번 */
+const clampReps = n => Math.min(10, Math.max(1, n));
+const repsChar = () => clampReps(state.repsChar || state.reps || 5);
+const repsWord = () => clampReps(state.repsWord || 3);
+const repsFor = m => isWordMission(m) ? repsWord() : repsChar();
 function stepsBar(n){
-  const names = ["1 학습지 받기","2 종이에 쓰기","3 사진 올리기","4 제일 잘 쓴 글자"];
+  const names = ["1 획순 보기","2 연습장에 쓰기","3 사진 올리기","4 제일 잘 쓴 글자"];
   return `<div class="steps">${names.map((t,i)=>`<span class="${i+1===n?"on":""}">${t}</span>`).join("")}</div>`;
 }
 async function renderPlay(){
   const m = cur.m, p = practiceMap();
   const head = `<div class="row" style="justify-content:space-between;margin-bottom:10px">
       <button class="btn ghost small" data-go="missions">← 미션 목록</button>
-      <div style="font-size:22px">${esc(m.title)}</div></div>`;
+      <div style="font-size:22px">${m.group ? `<span class="note" style="font-size:16px">${esc(m.theme)} · </span>` : ""}${esc(m.title)}</div></div>`;
   if (cur.step === 1){
+    const rep = repeatOf(m.id);
     const preview = charsOf(m).map(c => {
-      const s = skillInfo(c, p), after = lvOf(s.n + 1);
+      const s = skillInfo(c, p), after = lvOf(s.n + rep.xp);
       const msg = !s.lv ? `<span style="color:#1F7FD6">✨ 새 스킬!</span>`
         : after > s.lv ? `<span style="color:#E07A00">⬆️ Lv.${after}로!</span>`
-        : s.lv >= MAXLV ? `👑 MAX` : `${s.left}번 더 쓰면 Lv.${s.lv+1}`;
+        : s.lv >= MAXLV ? `👑 MAX` : `경험치 ${fmtN(s.left)} 더 모으면 Lv.${s.lv+1}`;
       return `<div style="width:92px;text-align:center">${skillCardHTML(s,{noxp:true})}<div class="note" style="font-size:12px;margin-top:4px">${msg}</div></div>`;
     }).join("");
+    // 미션의 글자를 낱말끼리 묶어 위에 버튼으로, 가운데에는 고른 글자 하나만 크게
+    const letters = [];
+    m.items.forEach((it, wi) => Array.from(it).forEach(c => letters.push({c, wi})));
+    cur.li = Math.min(cur.li || 0, letters.length - 1);
+    const chips = letters.length > 1 ? `<div class="lchips">${m.items.map((it, wi) => `<div class="wgrp">${letters.map((L, i) => L.wi === wi ? `<button data-li="${i}" class="${i === cur.li ? "on" : ""}">${esc(L.c)}</button>` : "").join("")}</div>`).join("")}</div>` : "";
     $view.innerHTML = head + `<div class="card">${stepsBar(1)}
-      <div class="center" style="font-size:19px;margin-bottom:8px">이 미션을 끝내면 얻는 스킬</div>
+      <div class="center" style="font-size:22px;margin-bottom:4px">✍️ 획순을 보고 따라 써 봐요</div>
+      <p class="note center" style="margin-top:0">주황색 붓이 쓰는 순서대로 따라가요. 동그라미가 시작점, 화살표가 쓰는 방향이에요.</p>
+      ${chips}
+      <div class="bslot" id="bslot"><div class="bcell"><div class="bwait">${esc(letters[cur.li].c)}</div></div></div>
+      <div class="row" style="justify-content:center;margin:12px 0 4px">
+        <button class="btn small" id="sReplay">🔁 다시 보기</button>
+        <button class="btn small blue" id="sSlow">🐢 천천히 보기</button>
+        <button class="btn small ghost" id="sStep">👉 한 획씩</button>
+        ${letters.length > 1 ? `<button class="btn small green" id="sNext">다음 글자 ▶</button>` : ""}
+      </div>
+      <p class="note center" id="sStepTx" style="min-height:1.6em;margin:0"></p>
+      <hr style="border:none;border-top:2px dashed var(--line);margin:16px 0">
+      <div class="center" style="font-size:19px;margin-bottom:8px">이 미션을 끝내면 얻는 스킬${rep !== REPEAT[0] ? ` <span class="tired" style="margin:0 0 0 6px">💤 ${rep.label}</span>` : ""}</div>
       <div class="row" style="justify-content:center;margin-bottom:16px">${preview}</div>
-      <div id="sheetBox" class="center note">학습지를 만드는 중…</div>
-      <div class="row" style="justify-content:center;margin-top:6px" id="sheetBtns"></div>
-      <p class="note center" id="sheetNote"></p>
+      <div class="center"><button class="btn green" id="toWrite">✏️ 연습장에 쓰러 가기</button></div></div>`;
+    const stepTx = document.getElementById("sStepTx"), mine = cur;
+    let player = null;
+    const show = async (i, auto) => {
+      if (player) player.stop();
+      cur.li = i; stepTx.textContent = "";
+      document.querySelectorAll("[data-li]").forEach(b => b.classList.toggle("on", Number(b.dataset.li) === i));
+      await brushFontReady(letters.map(L => L.c).join(""));
+      if (cur !== mine || tab !== "play" || cur.step !== 1 || cur.li !== i) return;   // 그사이 다른 화면으로 갔으면 그만
+      const slot = document.getElementById("bslot"); if (!slot) return;
+      player = brushCell(letters[i].c); cur.player = player;
+      slot.innerHTML = ""; slot.appendChild(player.el);
+      if (auto) player.play(false);
+    };
+    document.getElementById("sReplay").onclick = () => { if (player){ stepTx.textContent = ""; player.play(false); } };
+    document.getElementById("sSlow").onclick = () => { if (player){ stepTx.textContent = ""; player.play(true); } };
+    document.getElementById("sStep").onclick = async () => {
+      if (!player || !player.total) return;
+      const k = await player.step();
+      stepTx.textContent = `${k} / ${player.total}획` + (k >= player.total ? " · 다 그렸어요! 한 번 더 누르면 처음부터" : "");
+    };
+    const next = document.getElementById("sNext");
+    if (next) next.onclick = () => show((cur.li + 1) % letters.length, true);
+    document.querySelectorAll("[data-li]").forEach(b => b.onclick = () => show(Number(b.dataset.li), true));
+    document.getElementById("toWrite").onclick = () => { if (player) player.stop(); cur.step = 2; renderPlay(); };
+    show(cur.li, true);
+    return;
+  }
+  if (cur.step === 2){
+    const n = repsFor(m), word = isWordMission(m);
+    $view.innerHTML = head + `<div class="card">${stepsBar(2)}
+      <div class="center" style="font-size:22px;margin-bottom:4px">✏️ 연습장에 써요</div>
+      ${word
+        ? `<div class="bigword">${esc(m.items[0])}</div>
+           <p class="center" style="font-size:22px;margin:4px 0 12px">연습장에 <b style="color:var(--orange);font-size:30px">${n}번</b> 써 보세요</p>`
+        : `<p class="center" style="font-size:20px;margin:6px 0 12px">연습장에 <b style="color:var(--orange);font-size:28px">${n}번</b> 써 보세요</p>
+           <div class="wlist">${m.items.map(it => `<div><b>${esc(it)}</b><span>× ${n}</span></div>`).join("")}</div>`}
+      <div class="center" style="margin:8px 0 0"><button class="btn ghost small" id="backStroke">✍️ 획순 다시 보기</button></div>
       <hr style="border:none;border-top:2px dashed var(--line);margin:18px 0">
       <div class="center">
-        <div style="font-size:22px;margin-bottom:6px">✏️ 종이에 다 썼나요?</div>
-        <div class="note" style="margin-bottom:12px">어른이 학습지 사진을 찍어서 올려 주세요.</div>
-        <label class="btn green" style="cursor:pointer">📷 사진 올리기<input type="file" accept="image/*" id="photoIn" hidden></label>
+        <div style="font-size:22px;margin-bottom:6px">📷 다 썼나요?</div>
+        <div class="note" style="margin-bottom:12px">어른이 연습장 사진을 찍어 주세요.</div>
+        <label class="btn green" style="cursor:pointer">📷 사진 찍기${photoInput(true)}</label>
+        <div style="margin-top:12px"><label class="linkbtn galbtn">🖼️ 갤러리에서 고르기${photoInput(false)}</label></div>
       </div></div>`;
-    document.getElementById("photoIn").onchange = e => { const f = e.target.files && e.target.files[0]; if (f) loadPhoto(f); };
-    if (!cur.sheet) cur.sheet = await drawSheet(m);
-    if (tab !== "play" || !cur || cur.step !== 1) return;
-    const box = document.getElementById("sheetBox"); if (!box) return;
-    box.innerHTML = `<img class="sheet-prev" alt="학습지 미리보기" src="${cur.sheet.toDataURL("image/png")}">`;
-    const btns = document.getElementById("sheetBtns"), note = document.getElementById("sheetNote");
-    if (!btns) return;
-    btns.innerHTML = `<button class="btn blue small" id="printBtn">🖨️ 바로 인쇄</button><button class="btn ghost small" id="pdfBtn">📄 PDF로 저장</button><button class="btn ghost small" id="pngBtn">🖼️ 그림으로 저장</button>`;
-    note.textContent = "프린터가 연결되어 있으면 바로 인쇄, 아니면 파일로 저장해서 나중에 인쇄하세요.";
-    document.getElementById("printBtn").onclick = printSheet;
-    document.getElementById("pdfBtn").onclick = () => saveSheet("pdf");
-    document.getElementById("pngBtn").onclick = () => saveSheet("png");
+    bindPhotoInputs();
+    document.getElementById("backStroke").onclick = () => { cur.step = 1; renderPlay(); };
     return;
   }
   if (cur.step === 4){
@@ -877,10 +1510,11 @@ async function renderPlay(){
       <div class="note center">고른 글씨는 스킬 카드의 그림이 돼요!</div>
       <div class="labels">${labels.map(c=>`<button data-lab="${esc(c)}" class="${c===cur.label?"on":""}">${esc(c)}</button>`).join("")}</div>
       <div class="row" style="justify-content:center;margin-top:10px">
-        <label class="btn ghost small" style="cursor:pointer">📷 다시 올리기<input type="file" accept="image/*" id="photoIn2" hidden></label>
+        <label class="btn ghost small" style="cursor:pointer">📷 다시 찍기${photoInput(true)}</label>
         <button class="btn green" id="finishBtn">⭐ 미션 완료!</button>
-      </div></div>`;
-    document.getElementById("photoIn2").onchange = e => { const f = e.target.files && e.target.files[0]; if (f) loadPhoto(f); };
+      </div>
+      <div class="center" style="margin-top:10px"><label class="linkbtn galbtn">🖼️ 갤러리에서 고르기${photoInput(false)}</label></div></div>`;
+    bindPhotoInputs();
     document.querySelectorAll("[data-lab]").forEach(b => b.onclick = () => {
       cur.label = b.dataset.lab;
       document.querySelectorAll("[data-lab]").forEach(o => o.classList.toggle("on", o === b));
@@ -905,28 +1539,15 @@ async function saveFile(blob, filename){
     return true;
   }catch(_){ return false; }
 }
-function printSheet(){
-  if (!cur || !cur.sheet) return;
-  const pa = document.getElementById("printArea");
-  pa.innerHTML = `<img src="${cur.sheet.toDataURL("image/png")}" alt="">`;
-  const img = pa.querySelector("img");
-  const go = () => { try{ window.print(); }catch(_){ toast("인쇄를 열지 못했어요. PDF로 저장해서 인쇄해 주세요."); } };
-  if (img.complete) setTimeout(go, 50); else img.onload = () => setTimeout(go, 50);
-}
-async function saveSheet(kind){
-  if (!cur || !cur.sheet) return;
-  const base = "글씨미션_" + cur.m.title.replace(/\s+/g,"_");
-  let ok = false;
-  if (kind === "pdf"){
-    if (!window.jspdf){ toast("PDF 도구를 불러오지 못했어요. 그림으로 저장해 주세요."); return; }
-    const doc = new window.jspdf.jsPDF({unit:"mm", format:"a4", orientation:"portrait"});
-    doc.addImage(cur.sheet.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, 210, 297);
-    ok = await saveFile(doc.output("blob"), base + ".pdf");
-  } else {
-    const blob = await new Promise(r => cur.sheet.toBlob(r, "image/png"));
-    ok = await saveFile(blob, base + ".png");
-  }
-  if (ok) toast("학습지를 저장했어요.");
+/* 사진 받는 칸. camera가 true면 뒷면 카메라를 바로 켜 달라고 부탁하고(capture="environment"),
+   false면 지금처럼 갤러리에서 고른다. 카메라를 지원하지 않는 브라우저는 그냥 고르는 창을 연다 */
+const photoInput = camera => `<input type="file" accept="image/*" class="photo-in" ${camera ? 'capture="environment" data-cam="1"' : ""} hidden>`;
+function bindPhotoInputs(){
+  document.querySelectorAll(".photo-in").forEach(inp => inp.onchange = e => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = "";   // 같은 사진을 다시 골라도 반응하게
+    if (f) loadPhoto(f);
+  });
 }
 function loadPhoto(file){
   const url = URL.createObjectURL(file);
@@ -987,58 +1608,106 @@ async function finishMission(){
   const ok = await parentGate("아이가 종이에 잘 썼는지 확인했나요? 비밀번호를 넣으면 미션이 완료돼요.");
   if (!ok) return;
   const m = cur.m, now = Date.now();
+  const rep = repeatOf(m.id);          // 오늘 이 미션을 몇 번째로 하는지에 따른 비율 (완료 전에 계산)
   const before = practiceMap();
   const prev = state.done[m.id];
-  state.done[m.id] = {count: (prev ? prev.count : 0) + 1, last: now};
+  state.done[m.id] = {count: (prev ? prev.count : 0) + 1, last: now, xp: xpOf(prev) + rep.xp};
+  countToday(m.id);
   state.events = (state.events||0) + 1;
   const after = practiceMap();
-  const results = charsOf(m).map(c => ({c, lb: lvOf(before[c]||0), s: skillInfo(c, after)}));
+  const results = charsOf(m).map(c => ({c, lb: lvOf(before[c]||0), s: skillInfo(c, after), gain: rep.xp}));
   // 배틀 결과는 바로 계산해서 저장 (화면을 닫아도 데미지가 남도록)
   const b = state.boss || {idx:0, dmg:0};
+  const weak = (b.weak || []).slice();
+  const attacks = buildAttacks(m, after, rep, weak);
   const hp = bossHP(b.idx), startHP = hp - b.dmg;
-  const total = results.reduce((a,r) => a + r.s.dmg, 0);
+  const total = attacks.reduce((a, x) => a + x.hit, 0);
   const defeated = total >= startHP;
   const mon = dinoAt(b.idx);
-  state.boss = defeated ? {idx: b.idx + 1, dmg: 0} : {idx: b.idx, dmg: b.dmg + total};
+  state.boss = defeated ? {idx: b.idx + 1, dmg: 0, weak: []} : {idx: b.idx, dmg: b.dmg + total, weak};
+  if (defeated) state.boss.weak = pickWeak();   // 다음 상대의 약점은 이 순간에 정해서 저장
   const rec = {id: "r" + now, mission: m.id, title: m.title, label: cur.label, img: cropImage(), at: now};
   records.unshift(rec);
   persist();
   chain = chain.then(() => Store.addRecord(rec)).catch(err => {
     toast(err && err.code === "quota_exceeded" ? "사진 저장 공간이 가득 찼어요." : "글씨 사진을 저장하지 못했어요.");
   });
-  showSkillResults(results, () => showBattle({results, hp, startHP, mon, defeated, idx: b.idx}));
+  showSkillResults(results, rep, () => showBattle({attacks, hp, startHP, mon, defeated, idx: b.idx, weak, rep}));
+}
+/* 공격 카드 만들기
+   글자 카드: 스킬 데미지 × 하루 반복 비율 × (약점이면 3)
+   합체 카드(단어): (단어 속 글자 데미지 합) × 합체 보너스 × 하루 반복 비율 × (약점 글자가 하나라도 있으면 3)
+   모두 반올림, 가장 작게 1 */
+function buildAttacks(m, p, rep, weak){
+  const out = [], letters = [];
+  m.items.forEach(it => {
+    if (isWordItem(m, it)){
+      const w = wordPower(it, p), wk = Array.from(it).some(c => weak.includes(c));
+      out.push({kind:"word", w: it, combo: w.combo, base: w.dmg, weak: wk,
+        hit: Math.max(1, Math.round(w.raw * w.combo * rep.dmg * (wk ? WEAK_MULT : 1)))});
+    } else Array.from(it).forEach(c => { if (!letters.includes(c)) letters.push(c); });
+  });
+  letters.forEach(c => {
+    const s = skillInfo(c, p), w = weak.includes(c);
+    out.push({kind:"char", c, s, weak:w, hit: Math.max(1, Math.round(s.dmg * rep.dmg * (w ? WEAK_MULT : 1)))});
+  });
+  return out;
 }
 
-function showSkillResults(results, next){
+function showSkillResults(results, rep, next){
   chime(); confetti();
   const st = document.createElement("div"); st.className = "stage";
+  const tired = rep !== REPEAT[0];
   const newOnes = results.filter(r => r.lb === 0).length, ups = results.filter(r => r.lb > 0 && r.s.lv > r.lb).length;
-  const title = newOnes && ups ? "새 스킬 + 레벨 업!" : newOnes ? "✨ 새 스킬을 배웠어요!" : ups ? "⬆️ 스킬 레벨 업!" : "💪 스킬이 강해지고 있어요!";
+  const title = newOnes && ups ? "새 스킬 + 레벨 업!" : newOnes ? "✨ 새 스킬을 배웠어요!" : ups ? "⬆️ 스킬 레벨 업!"
+    : tired ? "💤 미션 완료!" : "💪 스킬이 강해지고 있어요!";
   st.innerHTML = `<h2>${title}</h2><p>미션 완료! 이번에 쓴 글자들이 스킬이 됐어요.</p>
+    ${tired ? `<div class="tired big">${TIRED_MSG}<br><span>오늘 같은 미션을 또 해서 ${rep.label}</span></div>` : ""}
     <div class="ups">${results.map((r,i) => {
+      const gain = r.gain ? `경험치 +${fmtN(r.gain)}` : `💤 경험치 +0`;
       const msg = r.lb === 0 ? `<div class="msg new">✨ NEW 스킬!</div>`
         : r.s.lv > r.lb ? `<div class="msg lv">⬆️ Lv.${r.lb} → Lv.${r.s.lv}<br><span class="note">데미지 ${DMG[r.lb]} → ${r.s.dmg}</span></div>`
-        : r.s.lv >= MAXLV ? `<div class="msg">👑 MAX 레벨</div>`
-        : `<div class="msg">경험치 +1<br><span class="note">${r.s.left}번 더 쓰면 Lv.${r.s.lv+1}</span></div>`;
+        : r.s.lv >= MAXLV ? `<div class="msg">👑 MAX 레벨<br><span class="note">${gain}</span></div>`
+        : `<div class="msg">${gain}<br><span class="note">경험치 ${fmtN(r.s.left)} 더 모으면 Lv.${r.s.lv+1}</span></div>`;
       return `<div class="upc" style="animation-delay:${i*0.15}s">${skillCardHTML(r.s,{hw:true})}${msg}</div>`;
     }).join("")}</div>
-    <button class="btn red" id="toBattle">⚔️ 공룡 공격하러 가기</button>`;
+    <button class="btn red" id="toBattle">⚔️ 공격하러 가기</button>`;
   document.body.appendChild(st);
   st.querySelector("#toBattle").onclick = () => { st.remove(); next(); };
 }
 
+/* 배틀 공격 카드: 글자 카드 또는 합체(단어) 카드. 실제로 들어갈 데미지를 보여 준다 */
+function attackCardHTML(a, i, rep){
+  const tired = rep !== REPEAT[0] ? `<div class="zz">💤</div>` : "";
+  const weak = a.weak ? `<div class="wtag">🎯 약점 ×${WEAK_MULT}</div>` : "";
+  if (a.kind === "word"){
+    return `<div class="skill wordc ${a.weak ? "weakc" : ""}" data-atk="${i}">${weak}${tired}
+      <div class="ch">${esc(a.w)}</div>
+      <div class="lv">${a.combo > 1 ? `🔗 합체 ×${a.combo}` : "📝 낱말"}</div>
+      <div class="dm">⚔️ ${a.hit}</div></div>`;
+  }
+  const g = GRADE[a.s.lv] || GRADE[1], hw = latestHandwriting(a.c);
+  return `<div class="skill g${a.s.lv || 1} ${a.weak ? "weakc" : ""}" data-atk="${i}">${weak}${tired}
+    ${hw ? `<img class="hw" src="${hw}" alt="">` : ""}
+    <div class="ch">${esc(a.c)}</div>
+    <div class="lv">${g.i} Lv.${a.s.lv}</div>
+    <div class="dm">⚔️ ${a.hit}</div></div>`;
+}
 function showBattle(o){
   const st = document.createElement("div"); st.className = "stage";
   let hpNow = o.startHP;
-  st.innerHTML = `<p style="margin-bottom:4px">${o.mon.lap ? "💪 더 강해진 공룡이 나타났다!" : "장난꾸러기 공룡이 나타났다!"}</p>
+  const tyName = o.mon.ty.name;
+  st.innerHTML = `<p style="margin-bottom:4px">${o.mon.lap ? `💪 더 강해진 ${tyName}${josa(tyName,"이","가")} 나타났다!` : o.mon.ty.appear}</p>
     <h2>${esc(o.mon.n)}</h2>
+    ${o.weak.length ? `<div class="weakline">🎯 약점 ${o.weak.map(c => `<b>${esc(c)}</b>`).join("")}</div>` : ""}
     <div class="arena">
       ${dinoImg(o.mon, "angry", "mon", 'id="mon"')}
       <div class="bar hp" style="height:24px"><i id="hpbar" style="width:${hpNow/o.hp*100}%"></i></div>
       <div id="hptx" style="font-size:20px">HP ${hpNow} / ${o.hp}</div>
     </div>
-    <p style="margin:14px 0 0" id="guide">스킬 카드를 눌러서 공격해요!</p>
-    <div class="atk">${o.results.map((r,i) => skillCardHTML(r.s,{noxp:true, hw:true, attr:`data-atk="${i}"`})).join("")}</div>
+    ${o.rep !== REPEAT[0] ? `<div class="tired">${TIRED_MSG} · 데미지 ${o.rep === REPEAT[1] ? "½" : "¼"}</div>` : ""}
+    <p style="margin:14px 0 0" id="guide">${o.attacks.some(a => a.kind === "word") ? "합체 카드를 눌러서 공격해요!" : "스킬 카드를 눌러서 공격해요!"}</p>
+    <div class="atk">${o.attacks.map((a,i) => attackCardHTML(a, i, o.rep)).join("")}</div>
     <div id="after"></div>`;
   document.body.appendChild(st);
   const arena = st.querySelector(".arena");
@@ -1047,15 +1716,22 @@ function showBattle(o){
     const mon = st.querySelector("#mon");
     if (card.classList.contains("used") || hpNow <= 0) return;
     card.classList.add("used"); used++;
-    const r = o.results[Number(card.dataset.atk)];
-    hpNow = Math.max(0, hpNow - r.s.dmg);
-    hitSfx();
-    mon.classList.remove("hit"); void mon.offsetWidth; mon.classList.add("hit");
-    const n = document.createElement("div"); n.className = "dmgnum"; n.textContent = "-" + r.s.dmg;
+    const a = o.attacks[Number(card.dataset.atk)];
+    hpNow = Math.max(0, hpNow - a.hit);
+    hitSfx(); if (a.weak) setTimeout(hitSfx, 140);
+    const hitCls = a.weak ? "hit2" : "hit";
+    mon.classList.remove("hit", "hit2"); void mon.offsetWidth; mon.classList.add(hitCls);
+    // 합체 공격과 약점 공격은 이름을 크게 띄운다
+    const shout = [a.kind === "word" ? (a.combo > 1 ? `${a.w} 합체 공격!` : `${a.w} 공격!`) : "", a.weak ? "🎯 약점 공격!" : ""].filter(Boolean);
+    if (shout.length){
+      const f = document.createElement("div"); f.className = "atkfx" + (a.weak ? " weak" : "");
+      f.innerHTML = shout.map(esc).join("<br>"); arena.appendChild(f); setTimeout(() => f.remove(), 1300);
+    }
+    const n = document.createElement("div"); n.className = "dmgnum" + (a.weak ? " big" : ""); n.textContent = "-" + a.hit;
     arena.appendChild(n); setTimeout(() => n.remove(), 1000);
     st.querySelector("#hpbar").style.width = (hpNow/o.hp*100) + "%";
     st.querySelector("#hptx").textContent = "HP " + hpNow + " / " + o.hp;
-    if (hpNow <= 0 || used === o.results.length) setTimeout(() => finishBattle(hpNow <= 0), 700);
+    if (hpNow <= 0 || used === o.attacks.length) setTimeout(() => finishBattle(hpNow <= 0), 900);
   });
   function finishBattle(win){
     st.querySelectorAll("[data-atk]").forEach(c => c.classList.add("used"));
@@ -1067,50 +1743,76 @@ function showBattle(o){
       mon.classList.add("gone");
       guide.innerHTML = `<b style="font-size:26px;color:var(--ink)">🎉 ${esc(o.mon.n)}${josa(o.mon.n,"이","가")} 친구가 됐어요!</b>`;
       const nx = dinoAt(o.idx + 1);
-      const allDone = o.mon.k === DINOS.length - 1;   // 한 바퀴의 마지막 공룡을 이겼다
-      if (allDone) setTimeout(confetti, 900);
-      after.innerHTML = (allDone ? `<div class="card" style="margin:8px auto 12px;max-width:440px;border:3px solid #FFD54F">
-          <div style="font-size:26px">🏆 공룡 ${DINOS.length}마리와 모두 친구가 됐어요!</div>
-          <p style="margin:8px 0 0">이제 <b>${nx.lap+1}회차</b>! 더 강해진 공룡들이 다시 나타나요.<br>스킬 레벨을 올려서 이겨 봐요! 💪</p></div>` : "")
-        + `<p>다음엔 <b>${esc(nx.n)}</b> (HP ${bossHP(o.idx+1)})${josa(nx.n,"이","가")} 기다리고 있어요.</p>`;
+      const allDone = o.mon.k === FOES.length - 1;    // 40번째(관우)를 이겼다
+      const groupDone = !allDone && lastOfGroup(o.mon.k); // 공룡 20번째, 로봇 10번째를 이겼다
+      let card = "";
+      if (allDone){
+        setTimeout(confetti, 900); setTimeout(confetti, 1800);
+        card = `<div class="card cheer big">
+          <div style="font-size:30px">🏆 ${FOES.length}명 모두 친구가 됐어요!</div>
+          <div style="font-size:34px;margin:6px 0">🦖 🤖 ⚔️</div>
+          <p style="margin:4px 0 0">공룡, 로봇, 삼국지 장수까지 모두 내 친구!<br><b>진짜 글씨 탐험 대장</b>이에요! 🎖️</p>
+          <p class="note" style="margin:10px 0 0">이제 <b>${nx.lap+1}회차</b>! 더 강해진 친구들이 다시 나타나요. 💪</p></div>`;
+      } else if (groupDone){
+        setTimeout(confetti, 900);
+        const ty = o.mon.ty, cnt = FOES.filter(f => f.t === o.mon.t).length, unit = ty.unit;
+        card = `<div class="card cheer">
+          <div style="font-size:26px">🏆 ${ty.name} ${cnt}${unit}${josa(unit,"과","와")} 모두 친구가 됐어요!</div>
+          <p style="margin:8px 0 0">이제 <b>${esc(nx.ty.name)}</b>${josa(nx.ty.name,"이","가")} 나타나요! ${nx.ty.e}</p></div>`;
+      }
+      after.innerHTML = card + `<p>다음엔 <b>${esc(nx.n)}</b> (HP ${bossHP(o.idx+1)})${josa(nx.n,"이","가")} 기다리고 있어요.</p>`;
     } else {
       guide.innerHTML = `<b style="font-size:22px;color:var(--ink)">${esc(o.mon.n)}의 HP가 ${hpNow} 남았어요!</b>`;
       after.innerHTML = `<p>💡 새 스킬을 배우거나 스킬 레벨을 올리면 더 세게 공격할 수 있어요.</p>`;
+    }
+    // 다음에 할 약점 글자 미션 (이겼으면 새 상대의 약점)
+    const nextWeak = (state.boss.weak || []).map(c => ({c, m: missionForChar(c)})).filter(x => x.m);
+    if (nextWeak.length){
+      after.innerHTML += `<div class="weaknext"><div>🎯 ${win ? "다음 상대의 약점 글자" : "약점 글자"}로 공격하면 데미지 ${WEAK_MULT}배!</div>
+        <div class="row" style="justify-content:center;margin-top:6px">${nextWeak.map(x => `<button class="btn small blue" data-wm="${esc(x.m.id)}"><b style="font-family:'Noto Sans KR';font-size:22px">${esc(x.c)}</b>&nbsp;연습하기</button>`).join("")}</div></div>`;
     }
     after.innerHTML += `<div class="row" style="justify-content:center">
       <button class="btn ghost" data-c="skills">📖 스킬북</button>
       <button class="btn" data-c="home">🏠 홈으로</button></div>`;
     after.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { st.remove(); cur = null; tab = b.dataset.c; render(); });
+    after.querySelectorAll("[data-wm]").forEach(b => b.onclick = () => { st.remove(); openMission(b.dataset.wm); });
   }
 }
 
-/* ================= 공룡 친구 ================= */
+/* ================= 친구 도감 ================= */
 function renderDinos(){
-  const b = state.boss, h = b.idx, N = DINOS.length;
+  const b = state.boss, h = b.idx, N = FOES.length;
   const lap = Math.floor(h / N), nowK = h % N;
-  // 공룡마다 친구가 된 횟수 (2회차부터는 같은 칸에 별이 늘어난다)
+  // 상대마다 친구가 된 횟수 (2회차부터는 같은 칸에 별이 늘어난다)
   const times = k => h > k ? Math.floor((h - k - 1) / N) + 1 : 0;
   const head = lap
-    ? `<div style="font-size:22px">🏆 공룡 ${N}마리 모두 친구! · 💪 ${lap+1}회차 친구 ${nowK}마리</div>`
-    : `<div style="font-size:22px">🦕 친구가 된 공룡 ${h}마리</div>`;
+    ? `<div style="font-size:22px">🏆 ${N}명 모두 친구! · 💪 ${lap+1}회차 친구 ${nowK}명</div>`
+    : `<div style="font-size:22px">🏅 친구 도감 · 친구 ${h}명</div>`;
   let html = `<div class="card center">${head}
-    <div class="note">미션을 끝내고 스킬로 공격해서 HP를 0으로 만들면 친구가 돼요. 친구가 된 공룡을 누르면 크게 볼 수 있어요.</div></div><div class="dgrid">`;
-  for (let k=0;k<N;k++){
-    const t = times(k), stars = t > 1 ? " " + "⭐".repeat(Math.min(t, 5)) : "";
-    if (k === nowK){
-      const d = dinoAt(h), hp = bossHP(h);
-      html += `<button class="dino now" data-dino="${h}">${dinoImg(d, "angry", "e")}<b>${esc(d.n)}</b><div class="bar hp" style="height:10px;margin:6px 8px"><i style="width:${(hp-b.dmg)/hp*100}%"></i></div><span class="note">HP ${hp-b.dmg}/${hp}</span></button>`;
-    } else if (t){
-      const d = dinoAt(k);
-      html += `<button class="dino" data-dino="${k}">${dinoImg(d, "friendly", "e")}<b>${esc(d.n)}</b><span class="note">💛 친구${stars}</span></button>`;
-    } else {
-      html += `<button class="dino lock" data-dino="-1">${dinoImg(dinoAt(k), "friendly", "e")}<b>???</b><span class="note">HP ${bossHP(k)}</span></button>`;
-    }
-  }
-  $view.innerHTML = html + `</div>`;
+    <div class="note">미션을 끝내고 스킬로 공격해서 HP를 0으로 만들면 친구가 돼요. 친구가 된 상대를 누르면 크게 볼 수 있어요.</div></div>`;
+  TYPE_ORDER.forEach(tk => {
+    const ty = TYPES[tk];
+    const ks = FOES.map((f, k) => k).filter(k => FOES[k].t === tk);
+    const got = ks.filter(k => times(k) > 0).length;
+    html += `<div class="sec-title">${ty.e} ${ty.group} <span class="note" style="font-size:16px">${got} / ${ks.length}</span></div><div class="dgrid">`;
+    ks.forEach(k => {
+      const t = times(k), stars = t > 1 ? " " + "⭐".repeat(Math.min(t, 5)) : "";
+      if (k === nowK){
+        const d = dinoAt(h), hp = bossHP(h);
+        html += `<button class="dino now" data-dino="${h}">${dinoImg(d, "angry", "e")}<b>${esc(d.n)}</b><div class="bar hp" style="height:10px;margin:6px 8px"><i style="width:${(hp-b.dmg)/hp*100}%"></i></div><span class="note">HP ${hp-b.dmg}/${hp}</span></button>`;
+      } else if (t){
+        const d = dinoAt(k);
+        html += `<button class="dino" data-dino="${k}">${dinoImg(d, "friendly", "e")}<b>${esc(d.n)}</b><span class="note">💛 친구${stars}</span></button>`;
+      } else {
+        html += `<button class="dino lock" data-dino="-1">${dinoImg(dinoAt(k), "friendly", "e")}<b>???</b><span class="note">HP ${bossHP(k)}</span></button>`;
+      }
+    });
+    html += `</div>`;
+  });
+  $view.innerHTML = html;
   $view.querySelectorAll("[data-dino]").forEach(el => el.onclick = () => {
     const i = Number(el.dataset.dino);
-    if (i < 0) return toast("아직 비밀이에요! 앞의 공룡과 먼저 친구가 되어요.");
+    if (i < 0) return toast("아직 비밀이에요! 앞의 상대와 먼저 친구가 되어요.");
     openDino(i, times(i % N));
   });
 }
@@ -1119,7 +1821,7 @@ function openDino(i, t){
   const hp = bossHP(i), left = hp - b.dmg;
   const bg = document.createElement("div"); bg.className = "modal-bg";
   const tag = friend ? `💛 내 친구${t > 1 ? " · ⭐ " + t + "번 친구가 됐어요" : ""}`
-    : `⚔️ 지금 만나고 있는 공룡${t ? " · 💛 예전에 " + t + "번 친구가 됐어요" : ""}`;
+    : `⚔️ 지금 만나고 있는 ${d.ty.name}${t ? " · 💛 예전에 " + t + "번 친구가 됐어요" : ""}`;
   bg.innerHTML = `<div class="modal dmodal">
     ${dinoImg(d, friend ? "friendly" : "angry", "big")}
     <h3>${esc(d.n)}</h3>
@@ -1134,7 +1836,41 @@ function openDino(i, t){
 }
 
 /* ================= 어른 메뉴 ================= */
-let parentOpen = false;
+const APP_VERSION = "gw-v4";   // sw.js의 VERSION과 같게 맞춘다 (배포할 때 둘 다 올린다)
+let parentOpen = false, parentView = null;
+/* 획순 확인: 숫자, 자음, 모음 전체 획순을 한 화면에서. 칸을 누르면 그 글자를 다시 그려 준다 */
+function renderStrokeCheck(){
+  const groups = [
+    {name:"숫자", chars:Array.from("0123456789")},
+    {name:"자음", chars:Array.from("ㄱㄴㄷㄹㅁㅂㅅㅇㅈㅊㅋㅌㅍㅎ")},
+    {name:"된소리", chars:Array.from("ㄲㄸㅃㅆㅉ")},
+    {name:"모음", chars:Array.from("ㅏㅑㅓㅕㅗㅛㅜㅠㅡㅣ")},
+    {name:"겹모음", chars:Array.from("ㅐㅒㅔㅖㅘㅙㅚㅝㅞㅟㅢ")},
+    {name:"글자 배치 예시", chars:Array.from("가고과각곡곽배빠깃")}
+  ];
+  $view.innerHTML = `<div class="card">
+      <div class="row" style="justify-content:space-between"><div style="font-size:22px">✍️ 획순 확인</div>
+      <button class="btn ghost small" id="backParent">← 어른 메뉴</button></div>
+      <p class="note" style="margin:6px 0 0">미션 화면과 같은 방식이에요. 바탕은 학교안심 받아쓰기 글꼴이고, 동그라미 숫자가 획 순서예요. 칸을 누르면 붓으로 한 획씩 칠해 보여 줘요.
+      틀린 획순이 있으면 글자와 바른 순서를 알려 주세요. 획 데이터는 index.html의 <b>STROKES</b> 한 곳에 모여 있어서 그 글자만 고치면 돼요.
+      된소리, 겹모음, 글자 배치는 기본 낱자를 조합해서 자동으로 만들어요.</p></div>
+    ${groups.map(g => `<div class="sec-title">${g.name}</div><div class="sgrid2">${g.chars.map(c => `<figure data-sc="${esc(c)}"><div class="bcell"><div class="bwait" style="font-size:80px">${esc(c)}</div></div><figcaption>${esc(c)} · ${(glyphStrokes(c) || []).length}획</figcaption></figure>`).join("")}</div>`).join("")}`;
+  document.getElementById("backParent").onclick = () => { parentView = null; renderParent(); };
+  // 글자마다 계산에 조금 걸리므로 한 칸씩 차례로 채운다 (화면이 멈추지 않게)
+  const figs = Array.from($view.querySelectorAll("[data-sc]")), view = $view.firstElementChild;
+  (async () => {
+    await brushFontReady(figs.map(f => f.dataset.sc).join(""));
+    for (const f of figs){
+      if (tab !== "parent" || parentView !== "strokes" || $view.firstElementChild !== view) return;   // 다른 화면으로 가면 그만
+      const b = brushCell(f.dataset.sc);
+      b.el._ls = 2.3;
+      b.showAll();
+      f.querySelector(".bcell").replaceWith(b.el);
+      f.onclick = () => b.play(false);
+      await new Promise(r => setTimeout(r, 0));
+    }
+  })();
+}
 function renderParent(){
   if (!parentOpen){
     $view.innerHTML = `<div class="card center"><div style="font-size:24px;margin-bottom:8px">🔒 어른 메뉴</div>
@@ -1143,6 +1879,7 @@ function renderParent(){
     document.getElementById("unlock").onclick = async () => { if (await parentGate("어른 메뉴를 열어요.")){ parentOpen = true; renderParent(); } };
     return;
   }
+  if (parentView === "strokes") return renderStrokeCheck();
   const all = allMissions(), p = practiceMap();
   const learned = Object.keys(p).filter(c => p[c] > 0);
   const lvCount = [0,0,0,0,0,0]; learned.forEach(c => lvCount[lvOf(p[c])]++);
@@ -1156,7 +1893,7 @@ function renderParent(){
         <div class="stat"><b>${doneCount()}/${all.length}</b><span>완료한 미션</span></div>
         <div class="stat"><b>${state.events||0}</b><span>총 인증 횟수</span></div>
         <div class="stat"><b>${learned.length}/${totalSkills()}</b><span>배운 스킬</span></div>
-        <div class="stat"><b>${state.boss.idx}</b><span>공룡 친구</span></div>
+        <div class="stat"><b>${state.boss.idx}</b><span>친구 (공룡·로봇·장수)</span></div>
       </div>
       <div class="note">레벨별 스킬 수: ${GRADE.slice(1).map((g,i)=>`${g.i} Lv.${i+1} <b>${lvCount[i+1]}</b>개`).join(" · ")}</div>
       ${weakest.length ? `<div class="note" style="margin-top:6px">반복이 더 필요한 글자: <b style="font-size:16px">${weakest.map(esc).join(" ")}</b></div>` : ""}
@@ -1165,13 +1902,28 @@ function renderParent(){
     </div>
     <div class="card">
       <div style="font-size:22px">⚙️ 스킬 규칙</div>
-      <p class="note" style="margin:6px 0 0">미션을 한 번 끝낼 때마다 그 미션의 글자마다 연습 1회가 쌓여요. 같은 글자가 여러 미션에 나오면(예: 나, 다, 사) 어느 미션에서 쓰든 함께 쌓여요.<br>
-      레벨업에 필요한 누적 횟수: ${LV_NEED.slice(1).map((n,i)=>`Lv.${i+1} ${n}번`).join(" · ")}<br>
-      공룡 HP는 100에서 시작해 한 마리마다 60씩 늘어나서, 새 스킬과 강화를 고르게 해야 빨리 친구로 만들 수 있어요.</p>
+      <p class="note" style="margin:6px 0 0">
+      <b>경험치:</b> 미션을 한 번 끝낼 때마다 그 미션의 글자마다 경험치 1이 쌓여요. 같은 글자가 여러 미션에 나오면(예: 나, 다, 사) 어느 미션에서 쓰든 함께 쌓여요.<br>
+      레벨업에 필요한 경험치: ${LV_NEED.slice(1).map((n,i)=>`Lv.${i+1} ${n}`).join(" · ")} / 레벨별 데미지: ${DMG.slice(1).map((n,i)=>`Lv.${i+1} ${n}`).join(" · ")}<br>
+      <b>💤 같은 미션 하루 반복:</b> 같은 날 두 번째는 경험치 0.5, 데미지 절반. 세 번째부터는 경험치 0, 데미지 4분의 1. 다음 날(자정)이 되면 다시 그대로 돌아와요.<br>
+      <b>🎯 약점 글자:</b> 상대마다 약점 글자 3개가 있어요(아직 안 배운 글자, 오래 안 쓴 글자에서 골라요. 한 미션에 약점이 두 개 들어가지 않아요). 약점 글자로 공격하면 데미지 ${WEAK_MULT}배.<br>
+      <b>🔗 합체 공격:</b> 낱말 미션은 낱말 하나가 카드 한 장이에요. 데미지 = 낱말 속 글자 데미지 합 × 합체 보너스(2글자 1.25, 3글자 1.5, 4글자 1.75, 5글자 이상 2). 약점 글자가 하나라도 들어 있으면 낱말 전체가 ${WEAK_MULT}배, 하루 반복 규칙도 똑같이 적용돼요.<br>
+      데미지는 카드마다 반올림하고 가장 작게 1이에요.<br>
+      상대 HP는 100에서 시작해 하나마다 60씩 늘어나서 (공룡 20 → 로봇 10 → 삼국지 장수 10, 40번째 관우는 2440), 여러 글자를 고르게 연습해야 빨리 친구로 만들 수 있어요.</p>
+    </div>
+    <div class="card">
+      <div style="font-size:22px">✍️ 획순과 연습 횟수</div>
+      <p class="note" style="margin:4px 0 0">미션 2단계에서 "연습장에 ○번 써 보세요"로 보여 줄 횟수예요. 글자 미션(숫자, 자음, 모음, 글자)과 낱말 미션(낱말, 내 이름, 두 글자 이상 우리집 미션)을 따로 정해요.</p>
+      <div class="row" style="margin-top:10px">
+        <label class="note" style="font-size:15px">글자 미션 <select class="tx" id="repsCharIn" style="width:auto">${[1,2,3,4,5,6,7,8,9,10].map(n => `<option value="${n}" ${n === repsChar() ? "selected" : ""}>${n}번</option>`).join("")}</select></label>
+        <label class="note" style="font-size:15px">낱말 미션 <select class="tx" id="repsWordIn" style="width:auto">${[1,2,3,4,5,6,7,8,9,10].map(n => `<option value="${n}" ${n === repsWord() ? "selected" : ""}>${n}번</option>`).join("")}</select></label>
+        <button class="btn small green" id="repsSave">저장</button>
+      </div>
+      <div class="row" style="margin-top:10px"><button class="btn small blue" id="strokeCheck">획순 확인 화면</button></div>
     </div>
     <div class="card">
       <div style="font-size:22px">👦 아이 이름</div>
-      <p class="note" style="margin:4px 0 0">이름을 넣으면 학습지에 이름이 찍히고, "내 이름 쓰기" 미션이 열려요.</p>
+      <p class="note" style="margin:4px 0 0">이름을 넣으면 "내 이름 쓰기" 미션이 열려요.</p>
       <div class="row" style="margin-top:10px;flex-wrap:nowrap"><input class="tx" id="nameIn" maxlength="8" value="${esc(state.name||"")}" placeholder="예: 김하준"><button class="btn small green" id="nameSave">저장</button></div>
     </div>
     <div class="card">
@@ -1192,9 +1944,16 @@ function renderParent(){
     </div>
     <div class="card" style="border:2px solid #FFD0D0">
       <div style="font-size:22px;color:var(--red)">⚠️ 완전 초기화</div>
-      <p class="note" style="margin:6px 0 12px">처음 설치한 상태로 되돌려요. 진행 기록, 스킬, 공룡 친구, 글씨 사진은 물론 <b>아이 이름, 우리집 미션, 어른 비밀번호까지 모두</b> 지워져요. 되돌릴 수 없어요.</p>
+      <p class="note" style="margin:6px 0 12px">처음 설치한 상태로 되돌려요. 진행 기록, 스킬, 친구 도감, 글씨 사진은 물론 <b>아이 이름, 우리집 미션, 어른 비밀번호까지 모두</b> 지워져요. 되돌릴 수 없어요.</p>
       <button class="btn red small" id="wipeBtn">⚠️ 완전 초기화하기</button>
-    </div>`;
+    </div>
+    <p class="note center" style="margin:4px 0 0;font-size:12px">앱 버전 ${APP_VERSION}</p>`;
+  document.getElementById("repsSave").onclick = () => {
+    state.repsChar = Number(document.getElementById("repsCharIn").value) || 5;
+    state.repsWord = Number(document.getElementById("repsWordIn").value) || 3;
+    persist(); toast(`연습 횟수를 글자 ${state.repsChar}번, 낱말 ${state.repsWord}번으로 저장했어요.`);
+  };
+  document.getElementById("strokeCheck").onclick = () => { parentView = "strokes"; renderParent(); window.scrollTo(0, 0); };
   document.getElementById("nameSave").onclick = () => {
     const v = document.getElementById("nameIn").value.trim().replace(/\s+/g,"");
     state.name = v; persist(); renderHeader(); toast(v ? `"${v}" 이름을 저장했어요.` : "이름을 지웠어요."); renderParent();
@@ -1209,6 +1968,8 @@ function renderParent(){
   };
   document.querySelectorAll("[data-delc]").forEach(b => b.onclick = async () => {
     if (!(await confirmBox("미션 삭제", "이 미션을 목록에서 지울까요? 이 미션으로 쌓은 스킬 연습 횟수도 함께 빠져요.", "지우기"))) return;
+    const gone = (state.custom || []).find(m => m.id === b.dataset.delc);
+    if (gone) customSplit(gone).forEach(m => { delete state.done[m.id]; });   // 나뉜 미션 기록도 함께
     state.custom = state.custom.filter(m => m.id !== b.dataset.delc);
     delete state.done[b.dataset.delc];
     persist(); renderParent();
@@ -1232,6 +1993,7 @@ function renderParent(){
       await chain;
       state = Object.assign({name:"", done:{}, custom:[], events:0, boss:{idx:0, dmg:0}}, data.state);
       if (!state.boss) state.boss = {idx:0, dmg:0};
+      migrateSplit();   // 예전 백업이면 낱말 미션 나누기 옮기기를 여기서 한다
       records = data.records.slice().sort((a,b) => b.at - a.at);
       await Store.replaceAll(JSON.parse(JSON.stringify(state)), records);
       renderHeader(); toast("백업에서 되살렸어요!"); renderParent();
@@ -1242,15 +2004,15 @@ function renderParent(){
     if (!(await parentGate("완전 초기화를 하려면 비밀번호를 한 번 더 입력해 주세요."))) return;
     try{ await chain; await Store.resetAll(); }
     catch(_){ toast("일부 기록을 지우지 못했어요. 잠시 후 다시 해 주세요."); return; }
-    state = {name:"", done:{}, custom:[], events:0, boss:{idx:0, dmg:0}};
+    state = {name:"", done:{}, custom:[], events:0, split: 2, boss:{idx:0, dmg:0}};
     records = []; parentOpen = false; cur = null;
     renderHeader(); tab = "home"; render();
     toast("처음 상태로 되돌렸어요. 다음 어른 확인 때 새 비밀번호를 만들어요.");
   };
   document.getElementById("resetBtn").onclick = async () => {
-    if (!(await confirmBox("모든 기록 지우기", "완료한 미션, 스킬, 공룡 친구, 글씨 사진이 모두 지워지고 되돌릴 수 없어요.", "모두 지우기"))) return;
+    if (!(await confirmBox("모든 기록 지우기", "완료한 미션, 스킬, 친구 도감, 글씨 사진이 모두 지워지고 되돌릴 수 없어요.", "모두 지우기"))) return;
     try{ await chain; await Store.resetAll(); }catch(_){ toast("일부 기록을 지우지 못했어요."); }
-    state = {name: state.name, pinHash: state.pinHash, done:{}, custom: state.custom||[], events:0, boss:{idx:0, dmg:0}}; records = [];
+    state = {name: state.name, pinHash: state.pinHash, reps: state.reps, repsChar: state.repsChar, repsWord: state.repsWord, split: 2, done:{}, custom: state.custom||[], events:0, boss:{idx:0, dmg:0}}; records = [];
     persist(); toast("기록을 모두 지웠어요."); renderParent();
   };
 }
@@ -1261,7 +2023,7 @@ function renderHeader(){
 }
 function render(){
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.t === tab || (tab==="play" && b.dataset.t==="missions")));
-  if (tab !== "parent") parentOpen = false;
+  if (tab !== "parent"){ parentOpen = false; parentView = null; }
   if (tab === "home") renderHome();
   else if (tab === "missions") renderMissions();
   else if (tab === "play" && cur) renderPlay();
@@ -1273,7 +2035,7 @@ function render(){
 }
 document.getElementById("tabs").addEventListener("click", e => {
   const b = e.target.closest("button[data-t]"); if (!b) return;
-  cur = null; tab = b.dataset.t; render();
+  cur = null; missionGroup = null; tab = b.dataset.t; render();
 });
 $view.addEventListener("click", e => {
   const o = e.target.closest("[data-open]"); if (o){ openMission(o.dataset.open); return; }
@@ -1286,6 +2048,7 @@ $view.addEventListener("click", e => {
   const {s, r} = await Store.init();
   if (s) state = Object.assign({name:"", done:{}, custom:[], events:0, boss:{idx:0, dmg:0}}, s);
   if (!state.boss) state.boss = {idx:0, dmg:0};
+  if (migrateSplit()) persist();   // 예전 기록이면 한 번만 옮긴다
   records = Array.isArray(r) ? r.sort((a,b) => b.at - a.at) : [];
   setBadge(); renderHeader(); render();
 })();
